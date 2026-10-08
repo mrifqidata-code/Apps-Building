@@ -24,7 +24,7 @@ Kalau Anda sudah terlanjur klik **Deploy** sebelum merge, tidak apa-apa. Setelah
 
    | Kolom                          | Isi                                     |
    | ------------------------------ | --------------------------------------- |
-   | Project name                   | `pos-sederhana` (harus persis sama)     |
+   | Project name                   | `apps-building` (harus persis sama)     |
    | Build command                  | `npm run build`                         |
    | Deploy command                 | `npx wrangler deploy` (biarkan bawaan)  |
    | Preview command                | `npx wrangler preview` (biarkan bawaan) |
@@ -34,10 +34,10 @@ Kalau Anda sudah terlanjur klik **Deploy** sebelum merge, tidak apa-apa. Setelah
    | API token                      | Biarkan token yang dibuat otomatis      |
    | Variable name / Variable value | Kosongkan, belum perlu                  |
 
-   Nama proyek harus `pos-sederhana`, karena sama dengan nama di file `wrangler.jsonc`. Kalau berbeda, build akan gagal.
+   Nama proyek harus `apps-building`, sama dengan nama di file `wrangler.jsonc`. Kalau namanya beda, Cloudflare tetap men-deploy ke proyek Anda, tapi akan muncul peringatan dan pull request otomatis dari Cloudflare untuk menyamakan nama.
 
 5. Klik **Deploy**, lalu tunggu 1–3 menit sampai statusnya **Success**.
-6. Aplikasi Anda sekarang ada di alamat berbentuk `https://pos-sederhana.<nama-akun>.workers.dev`. Lihat alamat persisnya di halaman proyek, bagian **Domains & Routes** atau tombol **Visit**.
+6. Aplikasi Anda sekarang ada di alamat berbentuk `https://apps-building.<nama-akun>.workers.dev`. Lihat alamat persisnya di halaman proyek, bagian **Domains & Routes** atau tombol **Visit**.
 
 ## Memasang aplikasi di HP Android
 
@@ -52,5 +52,6 @@ Karena **Enable Preview builds** menyala, setiap kali ada perubahan di branch PR
 ## Kalau ada masalah
 
 - **Build gagal:** buka proyek di Cloudflare → **Deployments** → klik deployment yang gagal → salin isi log, lalu kirimkan ke Claude.
-- **Muncul error soal nama Worker tidak cocok:** pastikan nama proyek di Cloudflare adalah `pos-sederhana`.
+- **Muncul error soal nama Worker tidak cocok:** pastikan nama proyek di Cloudflare adalah `apps-building`.
+- **Check "Workers Builds" di PR gagal dengan pesan _"This Worker does not exist on your account"_:** artinya Worker belum pernah berhasil di-deploy dari `main`. Versi pratinjau untuk PR baru bisa dibuat setelah deploy pertama dari `main` berhasil. Merge PR M0, tunggu deploy `main` sukses, lalu PR berikutnya akan mendapat pratinjau.
 - **Aplikasi tidak berubah setelah update:** tutup aplikasi lalu buka lagi. Kalau muncul tulisan "Versi baru tersedia", ketuk **Muat ulang**.

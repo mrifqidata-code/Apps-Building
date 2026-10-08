@@ -17,7 +17,8 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
 - IndexedDB lewat Dexie (`dexie-react-hooks` untuk query yang otomatis ter-update). IndexedDB adalah sumber data utama di perangkat.
 - Mulai M5: Supabase (Postgres, Auth, RLS, Storage).
 - Deploy: Cloudflare Workers dengan static assets saja, tanpa kode server (gratis, boleh komersial). Konfigurasinya di `wrangler.jsonc`. Panduan: `docs/deploy-cloudflare.md`.
-  - `name` di `wrangler.jsonc` harus sama dengan nama proyek di dasbor Cloudflare (`pos-sederhana`).
+  - `name` di `wrangler.jsonc` harus sama dengan nama Worker di dasbor Cloudflare (`apps-building`). Workers Builds tetap memakai nama Worker yang terhubung kalau beda (lewat `WRANGLER_CI_OVERRIDE_NAME`), tapi akan membuka PR otomatis untuk menyamakannya.
+  - Preview build untuk branch PR baru bisa jalan setelah Worker pernah berhasil di-deploy dari `main`. Sebelum itu, check "Workers Builds" gagal dengan pesan "This Worker does not exist on your account".
   - `wrangler.jsonc` wajib ada. Tanpa file ini, `wrangler deploy` menjalankan autoconfig yang mengubah `package.json` (termasuk skrip `preview` yang dipakai Playwright) dan memasang `@cloudflare/vite-plugin`.
   - Header cache diatur di `public/_headers`: `sw.js` dan manifest `no-cache`, `/assets/*` immutable.
   - Vercel Hobby tidak boleh dipakai untuk komersial.
