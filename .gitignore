@@ -1,0 +1,12 @@
+node_modules
+dist
+dev-dist
+coverage
+*.tsbuildinfo
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+.DS_Store
+.wrangler
