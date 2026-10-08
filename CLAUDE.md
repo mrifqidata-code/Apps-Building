@@ -16,7 +16,11 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
 - Vite + React + TypeScript (strict) + Tailwind CSS v4, dijadikan PWA lewat `vite-plugin-pwa`. Register type `prompt`: versi baru tidak memuat ulang otomatis di tengah transaksi.
 - IndexedDB lewat Dexie (`dexie-react-hooks` untuk query yang otomatis ter-update). IndexedDB adalah sumber data utama di perangkat.
 - Mulai M5: Supabase (Postgres, Auth, RLS, Storage).
-- Deploy: Cloudflare Pages (gratis, boleh komersial). Vercel Hobby tidak boleh dipakai untuk komersial. Panduan: `docs/deploy-cloudflare.md`.
+- Deploy: Cloudflare Workers dengan static assets saja, tanpa kode server (gratis, boleh komersial). Konfigurasinya di `wrangler.jsonc`. Panduan: `docs/deploy-cloudflare.md`.
+  - `name` di `wrangler.jsonc` harus sama dengan nama proyek di dasbor Cloudflare (`pos-sederhana`).
+  - `wrangler.jsonc` wajib ada. Tanpa file ini, `wrangler deploy` menjalankan autoconfig yang mengubah `package.json` (termasuk skrip `preview` yang dipakai Playwright) dan memasang `@cloudflare/vite-plugin`.
+  - Header cache diatur di `public/_headers`: `sw.js` dan manifest `no-cache`, `/assets/*` immutable.
+  - Vercel Hobby tidak boleh dipakai untuk komersial.
 - Test: Vitest (unit, jsdom + fake-indexeddb) dan Playwright (e2e terhadap build produksi, proyek `hp-android` = Pixel 7 dan `laptop`).
 - Node 22 (`.nvmrc`). Package manager: npm.
 
@@ -75,7 +79,7 @@ npm run check        # lint + format:check + typecheck + test
 
 ## Keputusan yang sudah disetujui (Okt 2026)
 
-1. **Biaya:** Cloudflare Pages dan Supabase Free selama pengembangan. Naik ke Supabase Pro (US$25/bulan) saat toko pertama mulai memakai sungguhan.
+1. **Biaya:** Cloudflare Workers dan Supabase Free selama pengembangan. Naik ke Supabase Pro (US$25/bulan) saat toko pertama mulai memakai sungguhan.
 2. **Urutan milestone:** M0 → M1 → M2 → **M5** → M3 → M4 → M6.
 3. **Pajak:** diatur per toko.
    - Pilihan `pricesIncludeTax` menentukan harga sudah atau belum termasuk pajak.

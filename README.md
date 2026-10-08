@@ -4,7 +4,7 @@ Aplikasi kasir (POS) berbasis web untuk kedai kopi/minuman, usaha makanan rumaha
 
 - **Cepat dipakai kasir:** tombol besar dan ramah jari.
 - **Tetap jalan saat internet putus:** data disimpan di perangkat dan disinkronkan saat online (mulai M5).
-- **Murah dioperasikan:** hosting gratis di Cloudflare Pages.
+- **Murah dioperasikan:** hosting gratis di Cloudflare Workers.
 
 Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Chrome. Bisa juga dipakai di laptop.
 
