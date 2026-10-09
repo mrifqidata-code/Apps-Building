@@ -1,8 +1,16 @@
 @import 'tailwindcss';
+/*
+ * Poppins, bundled with the app (not loaded from Google Fonts) so it also
+ * shows offline. Only the weights the UI uses: normal, semibold, bold.
+ */
+@import '@fontsource/poppins/latin-400.css';
+@import '@fontsource/poppins/latin-600.css';
+@import '@fontsource/poppins/latin-700.css';
 
 @theme {
   --font-sans:
-    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+    'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial,
+    sans-serif;
 }
 
 html,

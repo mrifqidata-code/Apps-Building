@@ -111,6 +111,10 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `syncCursors` dan `lastSyncAt`: posisi pull per tabel dan waktu sinkron terakhir.
   - `printer`: satu-satunya entri yang tetap ada saat HP dipindah ke toko lain.
 - UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
+- Font UI: **Poppins** (permintaan pemilik, 9 Okt 2026).
+  - Dibundel lewat `@fontsource/poppins` (subset latin, berat 400/600/700) di `src/index.css`, lalu di-precache service worker (`woff2` di `globPatterns`). Jadi font tetap tampil offline dan tidak memanggil Google Fonts.
+  - Struk di layar tetap `font-mono`, supaya mirip hasil printer thermal.
+  - Kalau memakai berat lain (mis. `font-medium` = 500), impor juga file berat itu.
 - Gambar (foto produk, QRIS) dikecilkan di perangkat lewat canvas, lalu disimpan sebagai Blob di tabel `images`.
 - Tombol aksi utama di layar bayar dan struk dibuat `sticky` di bawah, agar kasir tidak perlu menggulir.
 - Struk (`src/domain/receipt-text.ts`): `receiptSummaryRows` adalah satu-satunya sumber baris ringkasan (subtotal, diskon, layanan, PB1, total, bayar, kembalian). Layar, teks WhatsApp, dan cetakan semuanya memakainya.
