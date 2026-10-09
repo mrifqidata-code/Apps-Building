@@ -18,3 +18,51 @@ body {
   touch-action: manipulation;
   user-select: none;
 }
+
+/*
+ * Receipt as printed by the browser ("Simpan PDF"): only the receipt, 58 mm
+ * wide. `.print-measure` applies the same look off-screen so the page height
+ * can be measured before printing (see src/features/struk/pdf.ts).
+ */
+.print-measure {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 58mm;
+}
+
+.print-measure [data-print-area] {
+  width: 58mm;
+  margin: 0;
+  padding: 3mm;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 8.5pt;
+  line-height: 1.35;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+
+  [data-print-area] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 58mm;
+    margin: 0;
+    padding: 3mm;
+    border-radius: 0;
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    color: #000;
+  }
+}

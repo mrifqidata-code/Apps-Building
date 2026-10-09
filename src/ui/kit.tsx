@@ -1,5 +1,5 @@
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { formatRupiah, parseRupiah, type Rupiah } from '../domain/money';
+import { formatRupiah, parseRupiah, type Bps, type Rupiah } from '../domain/money';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -186,5 +186,51 @@ export function FilePickerButton({
         }}
       />
     </label>
+  );
+}
+
+const formatPercentInput = (bps: Bps | null) =>
+  bps === null ? '' : String(bps / 100).replace('.', ',');
+
+/** Percentage input ("10" or "12,5") that reports basis points, or null while invalid/empty. */
+export function PercentInput({
+  value,
+  onChange,
+  ...props
+}: {
+  value: Bps | null;
+  onChange: (value: Bps | null) => void;
+  'aria-label'?: string;
+  id?: string;
+}) {
+  const [text, setText] = useState(formatPercentInput(value));
+  const [shownValue, setShownValue] = useState(value);
+  if (shownValue !== value) {
+    setShownValue(value);
+    setText(formatPercentInput(value));
+  }
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        inputMode="decimal"
+        className={`${inputClass} pr-10`}
+        value={text}
+        placeholder="0"
+        onChange={(e) => {
+          setText(e.target.value);
+          const normalized = e.target.value.replace(',', '.').trim();
+          const percent = Number(normalized);
+          const valid =
+            normalized !== '' && Number.isFinite(percent) && percent >= 0 && percent <= 100;
+          const bps = valid ? Math.round(percent * 100) : null;
+          setShownValue(bps);
+          onChange(bps);
+        }}
+      />
+      <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-500">
+        %
+      </span>
+    </div>
   );
 }

@@ -336,6 +336,15 @@ export async function updateStoreSettings(
   actor: Actor,
   now: IsoDateTime,
 ): Promise<void> {
+  for (const key of ['pb1Bps', 'serviceBps', 'cashierMaxDiscountBps'] as const) {
+    const value = patch[key];
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 0 || value > 10_000)) {
+      throw new ValidationError('Persen harus antara 0 dan 100.');
+    }
+  }
+  if (patch.name !== undefined && !patch.name.trim()) {
+    throw new ValidationError('Nama toko wajib diisi.');
+  }
   await database.transaction('rw', database.stores, database.auditLog, async () => {
     const store = await database.stores.get(storeId);
     if (!store) throw new ValidationError('Data toko tidak ditemukan.');

@@ -45,14 +45,72 @@ export const PAYMENT_LABELS: Record<ReceiptPaymentMethod, string> = {
 
 const SEPARATOR = '--------------------------------';
 
+/** "Kopi Susu (Large, Extra Shot)" */
+export function receiptItemName(line: ReceiptLine): string {
+  return line.variantNames.length ? `${line.name} (${line.variantNames.join(', ')})` : line.name;
+}
+
+export interface SummaryRow {
+  label: string;
+  amount: Rupiah;
+  /** Shown with a minus sign (discounts). */
+  negative?: boolean;
+  /** total: emphasized; included: tax already inside the total, shown indented. */
+  kind: 'normal' | 'total' | 'included';
+}
+
+/**
+ * The money rows under the items, shared by the screen, WhatsApp text and
+ * printed receipt so they never disagree about what is shown.
+ */
+export function receiptSummaryRows(r: ReceiptView): SummaryRow[] {
+  const rows: SummaryRow[] = [];
+  const addsCharges = !r.pricesIncludeTax && (r.serviceAmount > 0 || r.taxAmount > 0);
+  if (r.discountAmount > 0 || addsCharges) {
+    rows.push({ label: 'Subtotal', amount: r.subtotal, kind: 'normal' });
+  }
+  if (r.discountAmount > 0) {
+    rows.push({ label: 'Diskon', amount: r.discountAmount, negative: true, kind: 'normal' });
+  }
+  if (!r.pricesIncludeTax && r.serviceAmount > 0) {
+    const label = `Biaya layanan (${formatBps(r.serviceBps)})`;
+    rows.push({ label, amount: r.serviceAmount, kind: 'normal' });
+  }
+  if (!r.pricesIncludeTax && r.taxAmount > 0) {
+    rows.push({ label: `PB1 (${formatBps(r.taxBps)})`, amount: r.taxAmount, kind: 'normal' });
+  }
+  rows.push({ label: 'Total', amount: r.total, kind: 'total' });
+  if (r.pricesIncludeTax && r.serviceAmount > 0) {
+    const label = `Termasuk layanan (${formatBps(r.serviceBps)})`;
+    rows.push({ label, amount: r.serviceAmount, kind: 'included' });
+  }
+  if (r.pricesIncludeTax && r.taxAmount > 0) {
+    const label = `Termasuk PB1 (${formatBps(r.taxBps)})`;
+    rows.push({ label, amount: r.taxAmount, kind: 'included' });
+  }
+  rows.push({ label: PAYMENT_LABELS[r.paymentMethod], amount: r.amountPaid, kind: 'normal' });
+  if (r.paymentMethod === 'cash') {
+    rows.push({ label: 'Kembalian', amount: r.changeAmount, kind: 'normal' });
+  }
+  return rows;
+}
+
+export const formatSummaryAmount = (row: SummaryRow) =>
+  `${row.negative ? '-' : ''}${formatRupiah(row.amount)}`;
+
+export const STATUS_BANNER: Record<ReceiptView['status'], string | null> = {
+  paid: null,
+  void: 'TRANSAKSI DIBATALKAN',
+  refunded: 'TRANSAKSI DIREFUND',
+};
+
 /** Plain-text receipt for WhatsApp; *text* renders bold there. */
 export function formatReceiptText(r: ReceiptView): string {
   const out: string[] = [];
   out.push(`*${r.storeName}*`);
   if (r.storeAddress) out.push(r.storeAddress);
   if (r.storePhone) out.push(`Telp. ${r.storePhone}`);
-  if (r.status === 'void') out.push('*TRANSAKSI DIBATALKAN*');
-  if (r.status === 'refunded') out.push('*TRANSAKSI DIREFUND*');
+  if (STATUS_BANNER[r.status]) out.push(`*${STATUS_BANNER[r.status]}*`);
   out.push(SEPARATOR);
   out.push(`No. ${r.receiptNo}`);
   out.push(formatJakartaDateTime(r.createdAt));
@@ -60,9 +118,7 @@ export function formatReceiptText(r: ReceiptView): string {
   out.push(SEPARATOR);
 
   for (const line of r.lines) {
-    out.push(
-      line.variantNames.length ? `${line.name} (${line.variantNames.join(', ')})` : line.name,
-    );
+    out.push(receiptItemName(line));
     out.push(
       `  ${line.qty} x ${formatRupiah(line.unitPrice)} = ${formatRupiah(line.qty * line.unitPrice)}`,
     );
@@ -71,27 +127,10 @@ export function formatReceiptText(r: ReceiptView): string {
   }
 
   out.push(SEPARATOR);
-  const addsCharges = !r.pricesIncludeTax && (r.serviceAmount > 0 || r.taxAmount > 0);
-  const showSubtotal = r.discountAmount > 0 || addsCharges;
-  if (showSubtotal) out.push(`Subtotal: ${formatRupiah(r.subtotal)}`);
-  if (r.discountAmount > 0) out.push(`Diskon: -${formatRupiah(r.discountAmount)}`);
-  if (!r.pricesIncludeTax) {
-    if (r.serviceAmount > 0) {
-      out.push(`Biaya layanan (${formatBps(r.serviceBps)}): ${formatRupiah(r.serviceAmount)}`);
-    }
-    if (r.taxAmount > 0) out.push(`PB1 (${formatBps(r.taxBps)}): ${formatRupiah(r.taxAmount)}`);
+  for (const row of receiptSummaryRows(r)) {
+    const text = `${row.label}: ${formatSummaryAmount(row)}`;
+    out.push(row.kind === 'total' ? `*${text}*` : row.kind === 'included' ? `  ${text}` : text);
   }
-  out.push(`*Total: ${formatRupiah(r.total)}*`);
-  if (r.pricesIncludeTax && (r.serviceAmount > 0 || r.taxAmount > 0)) {
-    if (r.serviceAmount > 0) {
-      out.push(`  Termasuk layanan (${formatBps(r.serviceBps)}): ${formatRupiah(r.serviceAmount)}`);
-    }
-    if (r.taxAmount > 0) {
-      out.push(`  Termasuk PB1 (${formatBps(r.taxBps)}): ${formatRupiah(r.taxAmount)}`);
-    }
-  }
-  out.push(`${PAYMENT_LABELS[r.paymentMethod]}: ${formatRupiah(r.amountPaid)}`);
-  if (r.paymentMethod === 'cash') out.push(`Kembalian: ${formatRupiah(r.changeAmount)}`);
 
   if (r.footer) {
     out.push(SEPARATOR);
