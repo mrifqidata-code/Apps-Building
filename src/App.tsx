@@ -3,7 +3,11 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { RequireOwner, RequireUser } from './app/guards';
 import { Layout } from './app/Layout';
 import { SessionProvider } from './app/session';
+import { syncManager } from './cloud/sync-manager';
 import { bootstrap } from './db/bootstrap';
+import { AccountPage } from './features/akun/AccountPage';
+import { NewPasswordPage } from './features/akun/NewPasswordPage';
+import { PairPage } from './features/akun/PairPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { PaymentPage } from './features/bayar/PaymentPage';
 import { CartProvider } from './features/kasir/CartProvider';
@@ -21,7 +25,11 @@ export function App() {
 
   useEffect(() => {
     bootstrap()
-      .then(setStoreId)
+      .then((id) => {
+        setStoreId(id);
+        // Sync runs in the background; the cashier never waits for it.
+        void syncManager.start();
+      })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
@@ -42,6 +50,9 @@ export function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/masuk" element={<LoginPage />} />
+              <Route path="/akun" element={<AccountPage />} />
+              <Route path="/akun/password-baru" element={<NewPasswordPage />} />
+              <Route path="/pasang" element={<PairPage />} />
               <Route
                 path="/"
                 element={

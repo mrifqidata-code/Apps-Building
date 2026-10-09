@@ -183,6 +183,27 @@ describe('Perangkat terdaftar dan kode pasang', () => {
     expect(pushed.data.failed).toEqual([
       expect.objectContaining({ id: a.owner.id, message: expect.stringContaining('row-level') }),
     ]);
+    // It may update its own device row (last seen), not another device's.
+    const ownDevice = (await phone.from('devices').select('*').eq('code', 'K2').single()).data;
+    const devicePush = await phone.rpc('push_changes', {
+      p_store_id: a.storeId,
+      p_changes: {
+        devices: [
+          {
+            ...ownDevice,
+            last_seen_at: '2026-10-09T05:00:00.000Z',
+            updated_at: '2026-10-09T05:00:00.000Z',
+          },
+          toServerRow({
+            ...(await a.database.devices.get(a.deviceId))!,
+            name: 'Diambil alih',
+            updatedAt: '2026-10-09T05:00:00.000Z',
+          }),
+        ],
+      },
+    });
+    expect(devicePush.data.failed).toEqual([expect.objectContaining({ id: a.deviceId })]);
+
     const codeFromPhone = await phone.rpc('create_pairing_code', { p_store_id: a.storeId });
     expect(codeFromPhone.error?.message).toBe('owner_account_required');
   });

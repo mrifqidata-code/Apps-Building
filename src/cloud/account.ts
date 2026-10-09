@@ -5,7 +5,8 @@ import type { PosDatabase } from '../db/db';
 import { META_DEVICE_ID, META_STORE_ID } from '../db/seed';
 import { CloudError } from './api';
 import { replaceLocalStore, setCloudLink } from './link';
-import { toCloudError } from './supabase-api';
+import { SupabaseCloudApi, toCloudError } from './supabase-api';
+import { SyncEngine } from './sync-engine';
 
 /** Messages for errors raised by the SQL functions and Supabase Auth. */
 const MESSAGES: Record<string, string> = {
@@ -194,4 +195,9 @@ export async function pairWithCode(
 
 export async function revokeDevice(client: SupabaseClient, deviceId: string) {
   await rpc(client, 'revoke_device', { p_device_id: deviceId });
+}
+
+/** Sends and fetches everything once, e.g. right after joining a store. */
+export async function firstSync(client: SupabaseClient, database: PosDatabase, storeId: string) {
+  await new SyncEngine(database, new SupabaseCloudApi(client), storeId).syncOnce();
 }

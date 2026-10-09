@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { useSession } from '../../app/session-context';
+import { useCloudLink } from '../../cloud/hooks';
 import { addCashier, setUserPin } from '../../db/auth';
 import { db } from '../../db/db';
 import type { User } from '../../db/schema';
@@ -20,6 +21,8 @@ export function UsersSection() {
     [store.id],
   );
   const [pinFor, setPinFor] = useState<User | null>(null);
+  // The server refuses owner changes from a paired cashier phone (see the RLS policy on users).
+  const ownerLocked = useCloudLink()?.role === 'device';
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +47,13 @@ export function UsersSection() {
                 {u.pinHash ? 'PIN sudah dibuat' : 'PIN belum dibuat'}
               </span>
             </span>
-            <Button onClick={() => setPinFor(u)}>Atur PIN</Button>
+            {u.role === 'owner' && ownerLocked ? (
+              <span className="max-w-40 text-right text-sm text-slate-500">
+                Ubah dari HP pemilik
+              </span>
+            ) : (
+              <Button onClick={() => setPinFor(u)}>Atur PIN</Button>
+            )}
           </li>
         ))}
       </ul>

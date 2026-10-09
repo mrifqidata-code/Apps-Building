@@ -1,4 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
+import { syncLabel, syncTone } from '../cloud/status-text';
+import { useSyncStatus } from '../cloud/sync-manager';
 import { signOut } from '../db/auth';
 import { db } from '../db/db';
 import { InstallButton } from '../pwa/InstallButton';
@@ -8,7 +10,9 @@ import { useSession } from './session-context';
 export function Layout() {
   const { store, user, isOwner } = useSession();
   const online = useOnlineStatus();
+  const sync = useSyncStatus();
   const navigate = useNavigate();
+  const tone = syncTone(sync, online);
 
   const links = [
     { to: '/', label: 'Kasir', end: true },
@@ -40,15 +44,18 @@ export function Layout() {
               {user.name} ⇄
             </button>
           )}
+          {/* Connection, or sync state once this device is connected to the cloud. */}
           <span
             className="flex shrink-0 items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm"
             data-testid="status-koneksi"
           >
             <span
               aria-hidden
-              className={`size-2.5 rounded-full ${online ? 'bg-emerald-300' : 'bg-amber-300'}`}
+              className={`size-2.5 rounded-full ${
+                tone === 'ok' ? 'bg-emerald-300' : tone === 'wait' ? 'bg-amber-300' : 'bg-red-300'
+              }`}
             />
-            {online ? 'Online' : 'Offline'}
+            {syncLabel(sync, online)}
           </span>
         </div>
         {user && (

@@ -578,10 +578,13 @@ create policy "Members edit users" on public.users
   with check (private.is_owner(store_id) or (private.is_member(store_id) and role = 'cashier'));
 
 -- Devices: only the owner registers or edits devices; a paired phone may update its own row.
+-- (An upsert is checked against the insert policy too, hence the own-row case there.
+-- New phones are registered by claim_pairing_code, never by a phone itself.)
 create policy "Store members read" on public.devices
   for select to authenticated using (private.is_member(store_id));
 create policy "Owner adds devices" on public.devices
-  for insert to authenticated with check (private.is_owner(store_id));
+  for insert to authenticated
+  with check (private.is_owner(store_id) or id = private.my_device_id(store_id));
 create policy "Owner or the device itself edits" on public.devices
   for update to authenticated
   using (private.is_owner(store_id) or id = private.my_device_id(store_id))
