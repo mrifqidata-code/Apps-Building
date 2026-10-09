@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { signIn, waitForOfflineReady } from './helpers';
 
 test('menampilkan toko demo dengan 15 produk dalam 3 kategori', async ({ page }) => {
   await page.goto('/');
+  await expect(page).toHaveURL(/\/masuk$/);
+  await signIn(page, 'Pemilik');
 
   await expect(page.getByRole('heading', { name: 'Kedai Kopi Senja (Demo)' })).toBeVisible();
   const products = page.getByRole('list', { name: 'Produk' }).getByRole('listitem');
@@ -24,11 +27,8 @@ test('menampilkan toko demo dengan 15 produk dalam 3 kategori', async ({ page })
 
 test('tetap bisa dibuka tanpa internet setelah kunjungan pertama', async ({ page, context }) => {
   await page.goto('/');
-  await expect(page.getByRole('list', { name: 'Produk' }).getByRole('listitem')).toHaveCount(15);
-  // Wait until the service worker has cached the app.
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-  });
+  await signIn(page, 'Pemilik');
+  await waitForOfflineReady(page);
 
   await context.setOffline(true);
   await page.reload();

@@ -75,3 +75,13 @@ export function formatJakartaDateTime(value: Date | IsoDateTime): string {
   const { year, month, day, hour, minute } = jakartaParts(value);
   return `${day} ${MONTHS_SHORT[month - 1]} ${year} ${pad2(hour)}.${pad2(minute)}`;
 }
+
+/** UTC ISO bounds [start, end) of a WIB business day such as "2026-10-08". */
+export function jakartaDayRange(dateKey: string): [IsoDateTime, IsoDateTime] {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) throw new RangeError(`tanggal tidak valid: ${dateKey}`);
+  const startMs =
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - JAKARTA_OFFSET_MS;
+  const dayMs = 24 * 60 * 60 * 1000;
+  return [new Date(startMs).toISOString(), new Date(startMs + dayMs).toISOString()];
+}

@@ -12,8 +12,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 
 | Milestone | Isi                                                   | Status       |
 | --------- | ----------------------------------------------------- | ------------ |
-| M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ PR ini    |
-| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | Berikutnya   |
+| M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai   |
+| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ PR ini    |
 | M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | Direncanakan |
 | M5        | Akun dan sinkron cloud (Supabase)                     | Direncanakan |
 | M3        | Kas, shift, laporan, ekspor CSV                       | Direncanakan |
@@ -21,6 +21,18 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | M6        | Pengerasan: void/refund, log audit, panduan pemakaian | Direncanakan |
 
 M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di atas data dari semua perangkat.
+
+## Mencoba aplikasi
+
+1. Saat pertama dibuka, pilih **Pemilik** lalu buat PIN (4–6 angka). Pengguna pertama yang memilih "Pemilik" di perangkat baru menentukan PIN pemilik, jadi lakukan ini sendiri sebelum perangkat dipakai kasir.
+2. Pemilik bisa:
+   - mengunggah gambar QRIS toko di **Pengaturan**,
+   - menambah kasir dan mengatur ulang PIN di **Pengaturan**,
+   - mengelola produk, kategori, varian, dan foto di **Produk**.
+3. Kasir masuk dengan PIN sendiri. Kasir hanya melihat menu **Kasir** dan **Riwayat**.
+4. Alur jualan: ketuk produk → **Bayar** → pilih nominal tunai atau QRIS/Transfer → **Selesaikan**. Struk tampil di layar dan bisa dikirim ke WhatsApp.
+
+Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat. Sinkron ke cloud hadir di M5.
 
 ## Menjalankan di komputer sendiri
 
@@ -66,11 +78,14 @@ Ikuti [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md). Ada langkah demi l
 
 ```
 src/
-  domain/     logika murni tanpa UI/database: uang, waktu WIB, ID, nomor struk
-  db/         database di perangkat (IndexedDB lewat Dexie): skema, data demo
-  features/   layar aplikasi per fitur (kasir, dan seterusnya)
+  domain/     logika murni tanpa UI/database: uang, harga & pajak, waktu WIB, ID,
+              nomor struk, PIN, teks struk WhatsApp
+  db/         database di perangkat (IndexedDB lewat Dexie): skema, keranjang,
+              simpan transaksi, kelola produk, PIN, data demo
+  app/        sesi pengguna, layout, dan penjaga halaman (khusus pemilik)
+  features/   layar per fitur: masuk, kasir, bayar, struk, riwayat, produk, pengaturan
   pwa/        pemasangan aplikasi dan pembaruan versi
-  ui/         komponen dan hook tampilan bersama
+  ui/         komponen tampilan bersama (tombol, sheet, keypad PIN, input rupiah)
 e2e/          test Playwright
 docs/         panduan
 ```
