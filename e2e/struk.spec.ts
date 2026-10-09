@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
-import { openCart, payButton, product, signIn } from './helpers';
+import { openCart, payButton, product, signIn, signOut } from './helpers';
 import {
   clearPrinted,
   installFakeBlePrinter,
@@ -96,7 +96,7 @@ test('pemilik mengatur batas diskon kasir', async ({ page }) => {
   await limit.getByRole('button', { name: 'Simpan batas diskon' }).click();
   await expect(limit.getByRole('status')).toHaveText('Batas diskon kasir tersimpan.');
 
-  await page.getByRole('button', { name: /ganti pengguna/ }).click();
+  await signOut(page);
   await signIn(page, 'Kasir');
   await product(page, 'Espresso').click();
   const cart = await openCart(page);
