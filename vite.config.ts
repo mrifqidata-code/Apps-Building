@@ -15,9 +15,9 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
         id: '/',
-        name: 'POS Sederhana',
-        short_name: 'Kasir',
-        description: 'Aplikasi kasir sederhana untuk UMKM yang tetap jalan tanpa internet.',
+        name: 'Reqap',
+        short_name: 'Reqap',
+        description: 'Reqap, aplikasi kasir untuk UMKM yang tetap jalan tanpa internet.',
         lang: 'id',
         start_url: '/',
         scope: '/',

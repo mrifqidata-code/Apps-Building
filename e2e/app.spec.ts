@@ -43,6 +43,8 @@ test('manifest memenuhi syarat agar bisa dipasang di layar utama', async ({ requ
   expect(response.ok()).toBe(true);
   const manifest = await response.json();
 
+  expect(manifest.name).toBe('Reqap');
+  expect(manifest.short_name).toBe('Reqap');
   expect(manifest.display).toBe('standalone');
   expect(manifest.start_url).toBe('/');
   const sizes = manifest.icons.map((icon: { sizes: string }) => icon.sizes);
