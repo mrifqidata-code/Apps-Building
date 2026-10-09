@@ -20,6 +20,7 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
   - `name` di `wrangler.jsonc` harus sama dengan nama Worker di dasbor Cloudflare (`apps-building`). Workers Builds tetap memakai nama Worker yang terhubung kalau beda (lewat `WRANGLER_CI_OVERRIDE_NAME`), tapi akan membuka PR otomatis untuk menyamakannya.
   - Preview build untuk branch PR baru bisa jalan setelah Worker pernah berhasil di-deploy dari `main`. Sebelum itu, check "Workers Builds" gagal dengan pesan "This Worker does not exist on your account".
   - `wrangler.jsonc` wajib ada. Tanpa file ini, `wrangler deploy` menjalankan autoconfig yang mengubah `package.json` (termasuk skrip `preview` yang dipakai Playwright) dan memasang `@cloudflare/vite-plugin`.
+  - `"previews": {}` di `wrangler.jsonc` wajib ada. Workers Builds menjalankan `npx wrangler preview` untuk branch PR, dan perintah itu gagal tanpa blok ini ("missing a `previews` block").
   - Header cache diatur di `public/_headers`: `sw.js` dan manifest `no-cache`, `/assets/*` immutable.
   - Vercel Hobby tidak boleh dipakai untuk komersial.
 - Test: Vitest (unit, jsdom + fake-indexeddb) dan Playwright (e2e terhadap build produksi, proyek `hp-android` = Pixel 7 dan `laptop`).
