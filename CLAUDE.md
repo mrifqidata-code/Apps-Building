@@ -88,6 +88,16 @@ npm run check        # lint + format:check + typecheck + test
 - UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
 - Gambar (foto produk, QRIS) dikecilkan di perangkat lewat canvas, lalu disimpan sebagai Blob di tabel `images`.
 - Tombol aksi utama di layar bayar dan struk dibuat `sticky` di bawah, agar kasir tidak perlu menggulir.
+- Struk (`src/domain/receipt-text.ts`): `receiptSummaryRows` adalah satu-satunya sumber baris ringkasan (subtotal, diskon, layanan, PB1, total, bayar, kembalian). Layar, teks WhatsApp, dan cetakan semuanya memakainya.
+- Cetak:
+  - `src/domain/receipt-layout.ts` menyusun baris 32 karakter (ASCII lewat `toPrintable`).
+  - `src/domain/escpos.ts` mengubahnya menjadi byte ESC/POS: ESC @, ESC a, ESC E, GS ! 0x01 (tinggi ganda), ESC d. Logo dikirim lewat GS v 0 dalam potongan 64 baris, maks. 256 titik.
+  - `src/printing/transports.ts`: BLE mencari layanan printer umum lalu menulis per 100 byte. Classic memakai Web Serial SPP.
+  - `src/printing/printer.ts` `PrinterManager`: koneksi per sesi. Preferensi disimpan di `meta.printer` (lokal per HP): jenis, nama, deviceId, `autoPrint`.
+  - Picker Bluetooth hanya boleh dibuka dari ketukan (`allowPicker`). Cetak otomatis tidak membuka picker.
+  - Tipe Web Bluetooth/Serial yang dipakai dideklarasikan sendiri di `src/printing/web-apis.d.ts` (tanpa paket @types).
+- PDF (`src/features/struk/pdf.ts`): `window.print()` hanya untuk elemen `[data-print-area]`, dengan `@page` selebar 58 mm dan tinggi sesuai struk (diukur lewat `.print-measure`, lihat `index.css`).
+- Test e2e printer memakai printer tiruan di `e2e/printer-mocks.ts`, yang merekam semua byte ke `window.__printed`.
 - Test e2e memakai helper di `e2e/helpers.ts`. Layout HP memakai bottom bar dan sheet keranjang, sedangkan laptop (≥1024px) memakai panel keranjang di kanan.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
@@ -121,7 +131,7 @@ npm run check        # lint + format:check + typecheck + test
    - Tidak ada yang bisa menghapus transaksi.
 5. **Printer:** ESC/POS 58mm lewat Web Bluetooth (BLE) dan Web Serial (Bluetooth Classic, Chrome Android 137+).
    - Fallback: kirim struk ke WhatsApp dan simpan PDF.
-   - Tipe printer pemilik akan dikirim sebelum M2. Uji printer fisik dilakukan pemilik.
+   - Printer pemilik: **Putian POS 583-01** (58 mm, ESC/POS), **belum dibeli** per 9 Okt 2026. Jenis Bluetooth-nya (BLE atau Classic) belum dipastikan, jadi keduanya didukung. Cetak fisik belum pernah diuji; semua test memakai printer tiruan. Setelah printer ada, pemilik menjalankan Tes cetak dan perbaikan dikerjakan di PR terpisah. Panduan: `docs/printer.md`.
 
 6. **PIN pemilik pertama** dibuat oleh orang pertama yang memilih "Pemilik" di perangkat baru. Ini hanya berlaku sampai M5, ketika pemilik login dengan email.
 7. **Nomor WhatsApp pelanggan** hanya dipakai untuk membuka `wa.me` dan tidak disimpan (privasi). Tabel `customers` belum dipakai.

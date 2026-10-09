@@ -214,4 +214,18 @@ describe('updateStoreSettings', () => {
     await updateStoreSettings(database, storeId, { qrisImageId: 'img-1' }, actor, T2);
     expect(await database.auditLog.count()).toBe(1);
   });
+
+  it('rejects invalid percentages and an empty store name', async () => {
+    const { database, storeId, actor } = await setup();
+    await expect(
+      updateStoreSettings(database, storeId, { pb1Bps: 10_001 }, actor, T1),
+    ).rejects.toThrow('Persen harus antara 0 dan 100.');
+    await expect(
+      updateStoreSettings(database, storeId, { serviceBps: 2.5 }, actor, T1),
+    ).rejects.toThrow(ValidationError);
+    await expect(updateStoreSettings(database, storeId, { name: '  ' }, actor, T1)).rejects.toThrow(
+      'Nama toko wajib diisi.',
+    );
+    expect(await database.auditLog.count()).toBe(0);
+  });
 });

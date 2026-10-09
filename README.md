@@ -13,8 +13,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | Milestone | Isi                                                   | Status       |
 | --------- | ----------------------------------------------------- | ------------ |
 | M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai   |
-| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ PR ini    |
-| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | Direncanakan |
+| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai   |
+| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ PR ini    |
 | M5        | Akun dan sinkron cloud (Supabase)                     | Direncanakan |
 | M3        | Kas, shift, laporan, ekspor CSV                       | Direncanakan |
 | M4        | Stok                                                  | Direncanakan |
@@ -70,6 +70,10 @@ Untuk mencoba dari HP di jaringan Wi-Fi yang sama, jalankan `npm run dev -- --ho
 
 Sebelum menjalankan `npm run test:e2e` pertama kali, pasang dulu browser untuk test dengan `npx playwright install chromium`.
 
+## Printer struk
+
+Panduan menghubungkan printer thermal 58 mm Bluetooth (termasuk Putian POS 583-01), cara mencetak, dan solusi kalau gagal: [docs/printer.md](docs/printer.md).
+
 ## Menayangkan ke internet
 
 Ikuti [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md). Ada langkah demi langkah sampai aplikasi terpasang di HP.
@@ -79,11 +83,12 @@ Ikuti [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md). Ada langkah demi l
 ```
 src/
   domain/     logika murni tanpa UI/database: uang, harga & pajak, waktu WIB, ID,
-              nomor struk, PIN, teks struk WhatsApp
+              nomor struk, PIN, teks struk WhatsApp, tata letak struk 58 mm, ESC/POS
   db/         database di perangkat (IndexedDB lewat Dexie): skema, keranjang,
               simpan transaksi, kelola produk, PIN, data demo
   app/        sesi pengguna, layout, dan penjaga halaman (khusus pemilik)
   features/   layar per fitur: masuk, kasir, bayar, struk, riwayat, produk, pengaturan
+  printing/   koneksi printer Bluetooth (BLE lewat Web Bluetooth, Classic lewat Web Serial)
   pwa/        pemasangan aplikasi dan pembaruan versi
   ui/         komponen tampilan bersama (tombol, sheet, keypad PIN, input rupiah)
 e2e/          test Playwright
