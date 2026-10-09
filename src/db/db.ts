@@ -58,7 +58,59 @@ export class PosDatabase extends Dexie {
       counters: 'key',
       meta: 'key',
     });
+
+    // v2 (M5): `pending` marks rows with local changes not yet sent to the server.
+    // IndexedDB leaves rows without the field out of the index, so finding what
+    // to send never scans the whole table.
+    this.version(2)
+      .stores({
+        stores: 'id, pending',
+        users: 'id, storeId, pending',
+        devices: 'id, storeId, &[storeId+code], pending',
+        categories: 'id, storeId, pending',
+        products: 'id, storeId, categoryId, pending',
+        variantGroups: 'id, storeId, productId, pending',
+        productVariants: 'id, storeId, productId, groupId, pending',
+        customers: 'id, storeId, pending',
+        shifts: 'id, storeId, deviceId, openedAt, pending',
+        transactions: 'id, storeId, &[storeId+receiptNo], createdAt, shiftId, pending',
+        transactionItems: 'id, storeId, transactionId, productId, pending',
+        stockMovements: 'id, storeId, productId, createdAt, pending',
+        auditLog: 'id, storeId, createdAt, entityId, pending',
+        images: 'id, storeId, pending',
+      })
+      .upgrade(async (tx) => {
+        // Nothing was ever synced before v2, so every existing row still has to be sent.
+        for (const table of SYNCED_TABLE_NAMES) {
+          await tx
+            .table(table)
+            .toCollection()
+            .modify((row: { syncedAt: string | null; pending?: 1 }) => {
+              if (row.syncedAt === null) row.pending = 1;
+            });
+        }
+      });
   }
 }
+
+/** Tables that sync with the server, parents before children. */
+export const SYNCED_TABLE_NAMES = [
+  'stores',
+  'users',
+  'devices',
+  'categories',
+  'products',
+  'variantGroups',
+  'productVariants',
+  'customers',
+  'shifts',
+  'images',
+  'transactions',
+  'transactionItems',
+  'stockMovements',
+  'auditLog',
+] as const;
+
+export type SyncedTableName = (typeof SYNCED_TABLE_NAMES)[number];
 
 export const db = new PosDatabase();

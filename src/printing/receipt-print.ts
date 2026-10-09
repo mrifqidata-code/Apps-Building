@@ -20,7 +20,7 @@ const LOGO_MAX_DOTS = 256;
 export async function loadLogoRaster(imageId: string | null): Promise<Raster | null> {
   if (!imageId) return null;
   const image = await db.images.get(imageId);
-  if (!image || image.deletedAt) return null;
+  if (!image?.blob || image.deletedAt) return null;
   const bitmap = await createImageBitmap(image.blob);
   const scale = Math.min(1, LOGO_MAX_DOTS / bitmap.width);
   const width = Math.max(1, Math.round(bitmap.width * scale));

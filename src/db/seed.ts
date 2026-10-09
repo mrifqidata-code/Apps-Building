@@ -79,6 +79,7 @@ export async function seedDemoData(
       updatedAt: now,
       syncedAt: null,
       deletedAt: null,
+      pending: 1,
     });
 
     const store: Store = {

@@ -4,6 +4,8 @@ const PORT = 4173;
 
 export default defineConfig({
   testDir: './e2e',
+  // Cloud sync tests need a local Supabase; see playwright.cloud.config.ts.
+  testIgnore: 'cloud.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // No automatic retries: a flaky test is a bug to fix, not to hide.

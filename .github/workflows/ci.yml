@@ -44,3 +44,25 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
+  cloud:
+    name: Supabase lokal (RLS + sinkron dua perangkat)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Postgres, Auth, Storage and the API in Docker, with supabase/migrations applied.
+      - run: npm run db:start
+      - run: npm run test:cloud
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:cloud
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-cloud
+          path: playwright-report
+          retention-days: 7

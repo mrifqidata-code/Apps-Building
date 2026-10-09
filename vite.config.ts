@@ -46,5 +46,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Need a running local Supabase; see vitest.cloud.config.ts.
+    exclude: ['src/**/*.cloud.test.ts'],
   },
 });

@@ -1,4 +1,5 @@
 dist
+dist-cloud
 dev-dist
 coverage
 playwright-report

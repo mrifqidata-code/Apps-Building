@@ -1,7 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useSession } from '../../app/session-context';
+import { isCloudConfigured } from '../../cloud/client';
+import { useCloudLink } from '../../cloud/hooks';
 import { pinCheckMessage, setUserPin, signIn } from '../../db/auth';
 import { db } from '../../db/db';
 import type { User } from '../../db/schema';
@@ -30,6 +32,7 @@ export function LoginPage() {
     [store.id],
   );
   const [selected, setSelected] = useState<User | null>(null);
+  const link = useCloudLink();
 
   if (activeUser) return <Navigate to={from} replace />;
 
@@ -43,6 +46,8 @@ export function LoginPage() {
       {selected ? (
         <PinStep
           user={selected}
+          // On a paired cashier phone the owner's PIN comes from the owner's own phone.
+          canCreatePin={!(selected.role === 'owner' && link?.role === 'device')}
           onBack={() => setSelected(null)}
           onSignedIn={() => navigate(from, { replace: true })}
         />
@@ -62,16 +67,39 @@ export function LoginPage() {
           ))}
         </ul>
       )}
+
+      {!selected && link === null && isCloudConfigured() && (
+        <nav
+          aria-label="Hubungkan HP ini"
+          className="mt-auto flex flex-col gap-2 border-t border-slate-200 pt-4 text-center"
+        >
+          <p className="text-sm text-slate-500">Toko sudah memakai aplikasi ini di HP lain?</p>
+          <Link
+            to="/pasang"
+            className="flex min-h-12 items-center justify-center rounded-xl bg-white font-semibold text-teal-800 ring-1 ring-slate-300"
+          >
+            Pasang HP kasir dengan kode
+          </Link>
+          <Link
+            to="/akun"
+            className="flex min-h-12 items-center justify-center rounded-xl font-semibold text-teal-800"
+          >
+            Masuk akun pemilik (email)
+          </Link>
+        </nav>
+      )}
     </main>
   );
 }
 
 function PinStep({
   user,
+  canCreatePin,
   onBack,
   onSignedIn,
 }: {
   user: User;
+  canCreatePin: boolean;
   onBack: () => void;
   onSignedIn: () => void;
 }) {
@@ -111,6 +139,20 @@ function PinStep({
       setBusy(false);
     }
   };
+
+  if (creating && !canCreatePin) {
+    return (
+      <div className="flex flex-col gap-5">
+        <p className="rounded-xl bg-amber-50 p-4 text-center text-amber-900">
+          PIN pemilik belum dibuat. Buat dulu di HP pemilik (yang masuk dengan email), lalu tunggu
+          sampai tersinkron ke HP ini.
+        </p>
+        <Button variant="ghost" onClick={onBack}>
+          ← Pilih pengguna lain
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

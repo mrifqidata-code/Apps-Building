@@ -3,7 +3,7 @@
 Aplikasi kasir (POS) berbasis web untuk kedai kopi/minuman, usaha makanan rumahan, dan toko kecil di Indonesia.
 
 - **Cepat dipakai kasir:** tombol besar dan ramah jari.
-- **Tetap jalan saat internet putus:** data disimpan di perangkat dan disinkronkan saat online (mulai M5).
+- **Tetap jalan saat internet putus:** data disimpan di perangkat dan disinkronkan ke cloud saat online.
 - **Murah dioperasikan:** hosting gratis di Cloudflare Workers.
 
 Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Chrome. Bisa juga dipakai di laptop.
@@ -14,8 +14,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | --------- | ----------------------------------------------------- | ------------ |
 | M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai   |
 | M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai   |
-| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ PR ini    |
-| M5        | Akun dan sinkron cloud (Supabase)                     | Direncanakan |
+| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ Selesai   |
+| M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ PR ini    |
 | M3        | Kas, shift, laporan, ekspor CSV                       | Direncanakan |
 | M4        | Stok                                                  | Direncanakan |
 | M6        | Pengerasan: void/refund, log audit, panduan pemakaian | Direncanakan |
@@ -32,7 +32,17 @@ M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di a
 3. Kasir masuk dengan PIN sendiri. Kasir hanya melihat menu **Kasir** dan **Riwayat**.
 4. Alur jualan: ketuk produk → **Bayar** → pilih nominal tunai atau QRIS/Transfer → **Selesaikan**. Struk tampil di layar dan bisa dikirim ke WhatsApp.
 
-Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat. Sinkron ke cloud hadir di M5.
+Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat.
+
+## Akun pemilik dan beberapa HP kasir
+
+Setelah Supabase disiapkan ([docs/supabase.md](docs/supabase.md)), pemilik bisa:
+
+- masuk dengan email,
+- menyimpan data toko di cloud,
+- memasang HP kasir lain dengan kode 8 huruf.
+
+Penjualan dari semua HP terkumpul dan tersinkron otomatis, termasuk yang dibuat saat offline. Aturan sinkron dan keamanannya: [docs/sinkron.md](docs/sinkron.md).
 
 ## Menjalankan di komputer sendiri
 
@@ -56,19 +66,22 @@ Untuk mencoba dari HP di jaringan Wi-Fi yang sama, jalankan `npm run dev -- --ho
 
 ## Perintah
 
-| Perintah            | Fungsi                                                     |
-| ------------------- | ---------------------------------------------------------- |
-| `npm run dev`       | Menjalankan aplikasi untuk pengembangan                    |
-| `npm run build`     | Membuat versi produksi di folder `dist`                    |
-| `npm run preview`   | Menjalankan hasil build (service worker/offline aktif)     |
-| `npm run lint`      | Memeriksa gaya dan potensi bug di kode (ESLint)            |
-| `npm run format`    | Merapikan format kode (Prettier)                           |
-| `npm run typecheck` | Memeriksa tipe TypeScript                                  |
-| `npm test`          | Unit test (Vitest)                                         |
-| `npm run test:e2e`  | Test alur di browser sungguhan (Playwright), HP dan laptop |
-| `npm run check`     | Lint, format, typecheck, dan unit test sekaligus           |
+| Perintah                 | Fungsi                                                     |
+| ------------------------ | ---------------------------------------------------------- |
+| `npm run dev`            | Menjalankan aplikasi untuk pengembangan                    |
+| `npm run build`          | Membuat versi produksi di folder `dist`                    |
+| `npm run preview`        | Menjalankan hasil build (service worker/offline aktif)     |
+| `npm run lint`           | Memeriksa gaya dan potensi bug di kode (ESLint)            |
+| `npm run format`         | Merapikan format kode (Prettier)                           |
+| `npm run typecheck`      | Memeriksa tipe TypeScript                                  |
+| `npm test`               | Unit test (Vitest)                                         |
+| `npm run test:e2e`       | Test alur di browser sungguhan (Playwright), HP dan laptop |
+| `npm run check`          | Lint, format, typecheck, dan unit test sekaligus           |
+| `npm run db:start`       | Menjalankan Supabase lokal di Docker (untuk test sinkron)  |
+| `npm run test:cloud`     | Test RLS dan sinkron dua perangkat ke Supabase lokal       |
+| `npm run test:e2e:cloud` | Test browser dengan sinkron aktif (dua HP)                 |
 
-Sebelum menjalankan `npm run test:e2e` pertama kali, pasang dulu browser untuk test dengan `npx playwright install chromium`.
+Sebelum menjalankan `npm run test:e2e` pertama kali, pasang dulu browser untuk test dengan `npx playwright install chromium`. Test cloud butuh [Docker](https://docs.docker.com/get-docker/) yang menyala.
 
 ## Printer struk
 
@@ -86,11 +99,13 @@ src/
               nomor struk, PIN, teks struk WhatsApp, tata letak struk 58 mm, ESC/POS
   db/         database di perangkat (IndexedDB lewat Dexie): skema, keranjang,
               simpan transaksi, kelola produk, PIN, data demo
+  cloud/      akun pemilik, kode pasang HP kasir, mesin sinkron ke Supabase
   app/        sesi pengguna, layout, dan penjaga halaman (khusus pemilik)
-  features/   layar per fitur: masuk, kasir, bayar, struk, riwayat, produk, pengaturan
+  features/   layar per fitur: masuk, akun, kasir, bayar, struk, riwayat, produk, pengaturan
   printing/   koneksi printer Bluetooth (BLE lewat Web Bluetooth, Classic lewat Web Serial)
   pwa/        pemasangan aplikasi dan pembaruan versi
   ui/         komponen tampilan bersama (tombol, sheet, keypad PIN, input rupiah)
+supabase/     konfigurasi Supabase lokal dan SQL database (migrations)
 e2e/          test Playwright
 docs/         panduan
 ```

@@ -15,7 +15,11 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
 
 - Vite + React + TypeScript (strict) + Tailwind CSS v4, dijadikan PWA lewat `vite-plugin-pwa`. Register type `prompt`: versi baru tidak memuat ulang otomatis di tengah transaksi.
 - IndexedDB lewat Dexie (`dexie-react-hooks` untuk query yang otomatis ter-update). IndexedDB adalah sumber data utama di perangkat.
-- Mulai M5: Supabase (Postgres, Auth, RLS, Storage).
+- Mulai M5: Supabase (Postgres, Auth, RLS, Storage) lewat `@supabase/supabase-js`.
+  - Library ini dimuat lazy (`src/cloud/client.ts`), jadi layar kasir tidak menunggunya.
+  - URL dan publishable key masuk saat build lewat `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, yang diisi di Cloudflare **Settings → Build → Build variables and secrets** (bukan `.env` di repo, supaya build e2e tidak menyentuh project asli). Kotak "Runtime variables and secrets" tidak bisa dipakai untuk Worker yang hanya berisi static assets.
+  - Tanpa variabel itu, fitur cloud tersembunyi dan aplikasi berjalan lokal saja.
+  - Panduan untuk pemilik: `docs/supabase.md`. Aturan sinkron: `docs/sinkron.md`.
 - Deploy: Cloudflare Workers dengan static assets saja, tanpa kode server (gratis, boleh komersial). Konfigurasinya di `wrangler.jsonc`. Panduan: `docs/deploy-cloudflare.md`.
   - `name` di `wrangler.jsonc` harus sama dengan nama Worker di dasbor Cloudflare (`apps-building`). Workers Builds tetap memakai nama Worker yang terhubung kalau beda (lewat `WRANGLER_CI_OVERRIDE_NAME`), tapi akan membuka PR otomatis untuk menyamakannya.
   - Preview build untuk branch PR baru bisa jalan setelah Worker pernah berhasil di-deploy dari `main`. Sebelum itu, check "Workers Builds" gagal dengan pesan "This Worker does not exist on your account".
@@ -37,7 +41,14 @@ npm run typecheck    # tsc -b
 npm test             # Vitest
 npm run test:e2e     # Playwright (build + preview di port 4173)
 npm run check        # lint + format:check + typecheck + test
+npm run db:start     # Supabase lokal di Docker (supabase CLI 2.120.0 lewat npx), pasang migrations
+npm run db:reset     # pasang ulang supabase/migrations dari nol (setelah mengubah SQL)
+npm run test:cloud   # RLS + sinkron dua perangkat terhadap Supabase lokal (src/**/*.cloud.test.ts)
+npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, port 4174)
 ```
+
+- Test `*.cloud.test.ts` dan `e2e/cloud.spec.ts` butuh Supabase lokal, jadi tidak ikut `npm test`/`npm run test:e2e`. CI menjalankannya di job terpisah "Supabase lokal".
+- Di container cloud Claude, jalankan `dockerd` dulu, lalu pakai `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` saat `supabase start`/`db reset`, karena blob image di public.ecr.aws diblokir proxy.
 
 - `@playwright/test` dikunci di 1.56.1 karena cocok dengan Chromium yang terpasang di container cloud (`/opt/pw-browsers`). Di CI, browser dipasang dengan `npx playwright install --with-deps chromium`.
 - TypeScript dikunci di 6.0.x karena `typescript-eslint` belum mendukung TS 7.
@@ -76,6 +87,17 @@ npm run check        # lint + format:check + typecheck + test
   - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
   - `catalog-admin.ts`: simpan produk/varian/kategori/pengaturan + audit perubahan harga, HPP, dan pengaturan.
   - `auth.ts`: PIN, sesi, dan tambah kasir.
+- `src/cloud/`: akun dan sinkron (M5).
+  - `sync-engine.ts` `SyncEngine`: push baris `pending` lewat RPC `push_changes`, pull lewat `pull_changes` dengan kursor per tabel (mundur 60 detik), lalu unduh file gambar.
+  - `merge.ts`: aturan konflik di HP. Harus sama dengan trigger di SQL.
+  - `mapping.ts`: camelCase ↔ snake_case dan jenis tabel (`lww`, `transaction`, `append`).
+  - `account.ts`: daftar/masuk pemilik, `connectLocalStore`, `joinStoreAsOwner`, `pairWithCode`, kode pasang, putus perangkat, pesan error berbahasa Indonesia.
+  - `link.ts`: status hubungan HP (`meta.cloudLink`) dan `replaceLocalStore` (mengosongkan HP, printer tetap).
+  - `sync-manager.ts`: menjadwalkan sinkron dan status untuk UI (`useSyncStatus`).
+- Semua tulis lokal ke tabel yang disinkron **wajib** lewat `newRow`/`touched` (`src/db/rows.ts`), yang memberi tanda `pending: 1`. Data dari server ditulis tanpa tanda itu.
+- SQL Supabase ada di `supabase/migrations/`.
+  - Jangan mengedit migration yang sudah dipasang pemilik. Tambahkan file baru.
+  - Pemilik memasang SQL dengan salin-tempel di SQL Editor (keputusan 10).
 - Batas diskon kasir ditegakkan di `completeSale` (bukan hanya di UI).
 - UI:
   - `react-router` (mode deklaratif, `BrowserRouter`).
@@ -85,6 +107,9 @@ npm run check        # lint + format:check + typecheck + test
   - `activeUserId`: pengguna yang sedang masuk.
   - `cartDraft`: keranjang belum dibayar, agar tidak hilang saat reload.
   - `pinAttempts:<userId>`: hitungan PIN salah.
+  - `cloudLink`: `{storeId, role: 'owner' | 'device', linkedAt}` kalau HP terhubung ke cloud.
+  - `syncCursors` dan `lastSyncAt`: posisi pull per tabel dan waktu sinkron terakhir.
+  - `printer`: satu-satunya entri yang tetap ada saat HP dipindah ke toko lain.
 - UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
 - Gambar (foto produk, QRIS) dikecilkan di perangkat lewat canvas, lalu disimpan sebagai Blob di tabel `images`.
 - Tombol aksi utama di layar bayar dan struk dibuat `sticky` di bawah, agar kasir tidak perlu menggulir.
@@ -104,6 +129,8 @@ npm run check        # lint + format:check + typecheck + test
 
 - Setiap tabel yang disinkron punya `id`, `storeId`, `createdAt`, `updatedAt`, `syncedAt` (null = belum terkirim), dan `deletedAt` (soft delete).
   - Untuk tabel `stores`, `storeId === id`.
+  - Khusus di HP (tidak dikirim): `pending` (1 = ada perubahan yang belum terkirim, terindeks sejak Dexie v2) dan `syncError` (alasan penolakan server).
+  - `images.blob` bisa `null` sementara file dari HP lain belum terunduh. File gambar disimpan di Storage bucket `store-images` dengan path `<store_id>/<id>`.
 - Nama kolom camelCase di perangkat dipetakan 1:1 ke snake_case di Supabase.
 - Tabel:
   - `stores`, `users`, `devices`
@@ -133,8 +160,19 @@ npm run check        # lint + format:check + typecheck + test
    - Fallback: kirim struk ke WhatsApp dan simpan PDF.
    - Printer pemilik: **Putian POS 583-01** (58 mm, ESC/POS), **belum dibeli** per 9 Okt 2026. Jenis Bluetooth-nya (BLE atau Classic) belum dipastikan, jadi keduanya didukung. Cetak fisik belum pernah diuji; semua test memakai printer tiruan. Setelah printer ada, pemilik menjalankan Tes cetak dan perbaikan dikerjakan di PR terpisah. Panduan: `docs/printer.md`.
 
-6. **PIN pemilik pertama** dibuat oleh orang pertama yang memilih "Pemilik" di perangkat baru. Ini hanya berlaku sampai M5, ketika pemilik login dengan email.
+6. **PIN pemilik pertama** dibuat oleh orang pertama yang memilih "Pemilik" di HP yang belum terhubung ke cloud.
+   - Mulai M5, di HP kasir yang dipasang dengan kode, PIN pemilik tidak bisa dibuat atau diubah. PIN pemilik datang dari HP pemilik lewat sinkron.
+   - RLS juga menolak perubahan baris pemilik dari HP kasir.
 7. **Nomor WhatsApp pelanggan** hanya dipakai untuk membuka `wa.me` dan tidak disimpan (privasi). Tabel `customers` belum dipakai.
+8. **HP kasir dipasang dengan kode** dari HP pemilik (disetujui 9 Okt 2026).
+   - HP kasir login anonim di Supabase, jadi tidak perlu email.
+   - Kodenya 8 karakter (bukan 6 digit, agar tidak bisa ditebak), berlaku 10 menit, sekali pakai, dan maksimal 5 kali salah per jam.
+   - Pemilik bisa memutus HP dari Pengaturan.
+   - Setiap HP mendapat kode perangkat sendiri (K1, K2, …) dari server.
+9. **Login pemilik:** email + password (Supabase Auth, konfirmasi email aktif).
+   - Email bawaan Supabase cukup karena email pemilik sama dengan akun Supabase-nya. Email bawaan hanya mengirim ke anggota tim, maks. ±2 per jam.
+   - MVP: satu akun pemilik untuk satu toko.
+10. **Perubahan database** dipasang pemilik dengan salin-tempel file SQL di SQL Editor Supabase. Tidak ada token Supabase yang disimpan di GitHub.
 
 ### Asumsi MVP
 
@@ -144,11 +182,13 @@ npm run check        # lint + format:check + typecheck + test
 - Satu shift per perangkat.
 - Kasir boleh diskon sampai `cashierMaxDiscountBps` (default 0).
 
-### Aturan sinkron (rinciannya ditulis di `docs/sinkron.md` saat M5)
+### Aturan sinkron (rincian: `docs/sinkron.md`)
 
 - Transaksi, item, mutasi stok, dan log audit hanya bisa ditambah. Upsert-nya idempoten berdasarkan `id`.
 - Status transaksi hanya bisa maju: `paid → void/refunded`.
-- Data master memakai last-write-wins per baris dan dicatat di audit.
+- Data master memakai last-write-wins per baris dan dicatat di audit. `updated_at` lebih dari 5 menit di masa depan dipotong ke waktu server.
+- Aturan ini ditegakkan oleh trigger di server **dan** `mergeRemote` di HP. Ubah keduanya bersamaan.
+- RLS: hanya anggota toko (`store_members`, peran `owner`/`device`) yang bisa membaca/menulis data toko. Tidak ada `DELETE` lewat API. Dibuktikan di `src/cloud/rls.cloud.test.ts`.
 
 ## Alur Git
 

@@ -11,6 +11,8 @@ import type { IsoDateTime } from '../domain/time';
  * - createdAt / updatedAt: UTC ISO strings
  * - syncedAt: null until the server has the latest version of the row
  * - deletedAt: soft delete, so deletions also reach other devices
+ * - pending: 1 while a local change still has to be sent (indexed; absent once sent)
+ * - syncError: why the server last rejected this row, if it did
  */
 export interface SyncedRow {
   id: string;
@@ -19,6 +21,8 @@ export interface SyncedRow {
   updatedAt: IsoDateTime;
   syncedAt: IsoDateTime | null;
   deletedAt: IsoDateTime | null;
+  pending?: 1;
+  syncError?: string;
 }
 
 export interface Store extends SyncedRow {
@@ -203,9 +207,12 @@ export interface AuditLogEntry extends SyncedRow {
   reason: string | null;
 }
 
-/** Product photos, store logo and the QRIS image; synced to Supabase Storage in M5. */
+/**
+ * Product photos, store logo and the QRIS image. The file itself goes to
+ * Supabase Storage; blob is null while an image from another device is still downloading.
+ */
 export interface StoredImage extends SyncedRow {
-  blob: Blob;
+  blob: Blob | null;
   mimeType: string;
 }
 
