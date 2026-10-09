@@ -60,3 +60,23 @@ export async function waitForOfflineReady(page: Page) {
     await navigator.serviceWorker.ready;
   });
 }
+
+/** Reads a value from the app's local `meta` table in IndexedDB. */
+export function readMeta(page: Page, key: string): Promise<unknown> {
+  return page.evaluate(
+    (metaKey) =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open('pos-sederhana');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const request = open.result.transaction('meta').objectStore('meta').get(metaKey);
+          request.onsuccess = () => {
+            open.result.close();
+            resolve(request.result?.value ?? null);
+          };
+          request.onerror = () => reject(request.error);
+        };
+      }),
+    key,
+  );
+}

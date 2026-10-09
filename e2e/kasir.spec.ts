@@ -1,6 +1,14 @@
 import { expect, test, type Locator } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
-import { openCart, payButton, product, signIn, signOut, waitForOfflineReady } from './helpers';
+import {
+  openCart,
+  payButton,
+  product,
+  readMeta,
+  signIn,
+  signOut,
+  waitForOfflineReady,
+} from './helpers';
 
 const QRIS_IMAGE = fileURLToPath(new URL('../public/pwa-512x512.png', import.meta.url));
 
@@ -89,6 +97,14 @@ test('keranjang tidak hilang saat aplikasi dimuat ulang', async ({ page }) => {
   await signIn(page, 'Kasir');
   await product(page, 'Espresso').click();
   await product(page, 'Espresso').click();
+  // Saving to IndexedDB takes a few milliseconds; reload only once the draft is stored,
+  // otherwise the test races the write instead of checking that it survives a reload.
+  await expect
+    .poll(async () => {
+      const draft = (await readMeta(page, 'cartDraft')) as { lines: { qty: number }[] } | null;
+      return draft?.lines[0]?.qty ?? 0;
+    })
+    .toBe(2);
   await page.reload();
   const cart = await openCart(page);
   await expect(cart.getByLabel('Jumlah Espresso')).toHaveText('2');
