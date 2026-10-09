@@ -20,6 +20,7 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
   - `name` di `wrangler.jsonc` harus sama dengan nama Worker di dasbor Cloudflare (`apps-building`). Workers Builds tetap memakai nama Worker yang terhubung kalau beda (lewat `WRANGLER_CI_OVERRIDE_NAME`), tapi akan membuka PR otomatis untuk menyamakannya.
   - Preview build untuk branch PR baru bisa jalan setelah Worker pernah berhasil di-deploy dari `main`. Sebelum itu, check "Workers Builds" gagal dengan pesan "This Worker does not exist on your account".
   - `wrangler.jsonc` wajib ada. Tanpa file ini, `wrangler deploy` menjalankan autoconfig yang mengubah `package.json` (termasuk skrip `preview` yang dipakai Playwright) dan memasang `@cloudflare/vite-plugin`.
+  - `"previews": {}` di `wrangler.jsonc` wajib ada. Workers Builds menjalankan `npx wrangler preview` untuk branch PR, dan perintah itu gagal tanpa blok ini ("missing a `previews` block").
   - Header cache diatur di `public/_headers`: `sw.js` dan manifest `no-cache`, `/assets/*` immutable.
   - Vercel Hobby tidak boleh dipakai untuk komersial.
 - Test: Vitest (unit, jsdom + fake-indexeddb) dan Playwright (e2e terhadap build produksi, proyek `hp-android` = Pixel 7 dan `laptop`).
@@ -63,6 +64,32 @@ npm run check        # lint + format:check + typecheck + test
 - **Dependensi:** jangan menambah dependensi besar tanpa alasan. Jelaskan setiap dependensi baru di deskripsi PR.
 - **Tanya pemilik produk dulu** untuk pilihan yang memengaruhi biaya, keamanan, atau data pelanggan.
 
+## Struktur dan pola kode
+
+- `src/domain/`: logika murni tanpa React/Dexie, semuanya dengan unit test.
+  - `pricing.ts`: urutan hitung diskon baris → subtotal → diskon transaksi → layanan → PB1, termasuk mode harga "sudah termasuk pajak".
+  - `cash.ts`: tombol nominal cepat.
+  - `pin.ts`: hash PBKDF2 dan kunci 5x salah.
+  - `receipt-text.ts`: teks struk dan link `wa.me`.
+- `src/db/`: layanan Dexie.
+  - `checkout.ts` `completeSale`: satu transaksi IndexedDB untuk nomor struk + transaksi + item + mutasi stok. Harga **selalu dibaca ulang dari katalog** saat bayar, jadi jangan percaya harga dari state UI.
+  - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
+  - `catalog-admin.ts`: simpan produk/varian/kategori/pengaturan + audit perubahan harga, HPP, dan pengaturan.
+  - `auth.ts`: PIN, sesi, dan tambah kasir.
+- Batas diskon kasir ditegakkan di `completeSale` (bukan hanya di UI).
+- UI:
+  - `react-router` (mode deklaratif, `BrowserRouter`).
+  - Halaman pemilik dibungkus `RequireOwner`.
+  - Context dan hook dipisah dari provider (`session-context.ts`, `cart-context.ts`) agar fast refresh tidak memberi peringatan.
+- Data lokal di tabel `meta`:
+  - `activeUserId`: pengguna yang sedang masuk.
+  - `cartDraft`: keranjang belum dibayar, agar tidak hilang saat reload.
+  - `pinAttempts:<userId>`: hitungan PIN salah.
+- UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
+- Gambar (foto produk, QRIS) dikecilkan di perangkat lewat canvas, lalu disimpan sebagai Blob di tabel `images`.
+- Tombol aksi utama di layar bayar dan struk dibuat `sticky` di bawah, agar kasir tidak perlu menggulir.
+- Test e2e memakai helper di `e2e/helpers.ts`. Layout HP memakai bottom bar dan sheet keranjang, sedangkan laptop (≥1024px) memakai panel keranjang di kanan.
+
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
 
 - Setiap tabel yang disinkron punya `id`, `storeId`, `createdAt`, `updatedAt`, `syncedAt` (null = belum terkirim), dan `deletedAt` (soft delete).
@@ -95,6 +122,9 @@ npm run check        # lint + format:check + typecheck + test
 5. **Printer:** ESC/POS 58mm lewat Web Bluetooth (BLE) dan Web Serial (Bluetooth Classic, Chrome Android 137+).
    - Fallback: kirim struk ke WhatsApp dan simpan PDF.
    - Tipe printer pemilik akan dikirim sebelum M2. Uji printer fisik dilakukan pemilik.
+
+6. **PIN pemilik pertama** dibuat oleh orang pertama yang memilih "Pemilik" di perangkat baru. Ini hanya berlaku sampai M5, ketika pemilik login dengan email.
+7. **Nomor WhatsApp pelanggan** hanya dipakai untuk membuka `wa.me` dan tidak disimpan (privasi). Tabel `customers` belum dipakai.
 
 ### Asumsi MVP
 

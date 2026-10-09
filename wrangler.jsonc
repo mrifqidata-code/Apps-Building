@@ -9,4 +9,7 @@
     // Any unknown path serves index.html so client-side routes work offline-first.
     "not_found_handling": "single-page-application",
   },
+  // Required by `wrangler preview`, which Workers Builds runs for PR branches.
+  // Empty: previews reuse the settings above (static assets only, no bindings).
+  "previews": {},
 }

@@ -4,6 +4,7 @@ import {
   formatJakartaDateTime,
   jakartaCompactDate,
   jakartaDateKey,
+  jakartaDayRange,
   jakartaParts,
 } from './time';
 
@@ -55,5 +56,17 @@ describe('Jakarta time', () => {
 
   it('rejects invalid timestamps', () => {
     expect(() => jakartaDateKey('bukan tanggal')).toThrow(RangeError);
+  });
+
+  it('gives the UTC bounds of a WIB day', () => {
+    expect(jakartaDayRange('2026-10-08')).toEqual([
+      '2026-10-07T17:00:00.000Z',
+      '2026-10-08T17:00:00.000Z',
+    ]);
+    const [start, end] = jakartaDayRange('2026-12-31');
+    expect(jakartaDateKey(start)).toBe('2026-12-31');
+    expect(jakartaDateKey(new Date(Date.parse(end) - 1))).toBe('2026-12-31');
+    expect(jakartaDateKey(end)).toBe('2027-01-01');
+    expect(() => jakartaDayRange('8-10-2026')).toThrow(RangeError);
   });
 });
