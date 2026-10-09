@@ -131,7 +131,7 @@ npm run check        # lint + format:check + typecheck + test
    - Tidak ada yang bisa menghapus transaksi.
 5. **Printer:** ESC/POS 58mm lewat Web Bluetooth (BLE) dan Web Serial (Bluetooth Classic, Chrome Android 137+).
    - Fallback: kirim struk ke WhatsApp dan simpan PDF.
-   - Printer pemilik: **Putian POS 583-01** (58 mm, ESC/POS). Jenis Bluetooth-nya (BLE atau Classic) belum dipastikan, jadi keduanya didukung. Uji printer fisik dilakukan pemilik. Panduan: `docs/printer.md`.
+   - Printer pemilik: **Putian POS 583-01** (58 mm, ESC/POS), **belum dibeli** per 9 Okt 2026. Jenis Bluetooth-nya (BLE atau Classic) belum dipastikan, jadi keduanya didukung. Cetak fisik belum pernah diuji; semua test memakai printer tiruan. Setelah printer ada, pemilik menjalankan Tes cetak dan perbaikan dikerjakan di PR terpisah. Panduan: `docs/printer.md`.
 
 6. **PIN pemilik pertama** dibuat oleh orang pertama yang memilih "Pemilik" di perangkat baru. Ini hanya berlaku sampai M5, ketika pemilik login dengan email.
 7. **Nomor WhatsApp pelanggan** hanya dipakai untuk membuka `wa.me` dan tidak disimpan (privasi). Tabel `customers` belum dipakai.

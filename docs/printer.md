@@ -2,7 +2,19 @@
 
 Aplikasi mencetak ke printer thermal 58 mm lewat Bluetooth, langsung dari **Chrome di HP Android**. Tidak perlu memasang aplikasi printer lain.
 
-Printer yang dipakai pemilik: **Putian POS 583-01** (58 mm, perintah ESC/POS). Panduan ini juga berlaku untuk printer 58 mm Bluetooth lain, misalnya EPPOS, Xprinter, RPP02N, dan PT-210.
+Printer yang direncanakan pemilik: **Putian POS 583-01** (58 mm, perintah ESC/POS). Printer ini belum dibeli, jadi belum diuji langsung. Panduan ini juga berlaku untuk printer 58 mm Bluetooth lain, misalnya EPPOS, Xprinter, RPP02N, dan PT-210.
+
+## Tips memilih printer sebelum membeli
+
+Cek deskripsi produk di toko online. Printer yang paling mudah tersambung ke aplikasi ini:
+
+1. **Lebar kertas 58 mm.** Aplikasi mencetak 32 karakter per baris. Printer 80 mm tetap bisa dipakai, tapi struknya hanya terisi sebagian lebar kertas.
+2. **Mendukung ESC/POS.** Biasanya tertulis "ESC/POS", "support POS", atau "compatible with Loyverse/Moka/Olsera".
+3. **Bluetooth 4.0 / BLE, atau tertulis "support iOS/iPhone".** Printer yang bisa dipakai di iPhone hampir selalu memakai BLE. Printer BLE bisa langsung dipilih dari aplikasi tanpa pairing di pengaturan HP.
+4. Printer yang hanya **Bluetooth Classic** ("support Android only") juga bisa dipakai, tapi harus di-pairing dulu dan butuh Chrome Android versi 137 ke atas.
+5. Kalau ragu, tanyakan ke penjual: **"Apakah printer ini Bluetooth BLE (4.0) dan mendukung ESC/POS?"**
+
+Setelah printer datang, ikuti langkah di bawah lalu jalankan **Tes cetak**.
 
 ## Yang perlu disiapkan
 
