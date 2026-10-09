@@ -9,7 +9,7 @@ export function useImageUrl(imageId: string | null | undefined): string | null {
     [imageId],
   );
   const url = useMemo(
-    () => (image && !image.deletedAt ? URL.createObjectURL(image.blob) : null),
+    () => (image?.blob && !image.deletedAt ? URL.createObjectURL(image.blob) : null),
     [image],
   );
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url]);
