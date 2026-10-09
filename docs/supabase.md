@@ -49,14 +49,14 @@ Alamat ini dipakai tautan di email konfirmasi dan email "lupa password".
 1. Di Supabase, buka **Project Settings → API Keys** (atau tombol **Connect** di atas). Salin:
    - **Project URL**, contohnya `https://abcdefgh.supabase.co`
    - **Publishable key**, yang diawali `sb_publishable_…`
-2. Di dasbor Cloudflare, buka **Workers & Pages → apps-building → Settings → Build**. Cari bagian **Variables and secrets** di dalam **Build**, lalu tambahkan dua variabel bertipe **Text**:
+2. Di dasbor Cloudflare, buka **Workers & Pages → apps-building → Settings**, gulir ke bagian **Build**, lalu cari kotak **Build variables and secrets** dan klik **Add**. Tambahkan dua variabel bertipe **Text**:
 
    | Nama variabel                   | Isi             |
    | ------------------------------- | --------------- |
    | `VITE_SUPABASE_URL`             | Project URL     |
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | Publishable key |
 
-   Pastikan dimasukkan di bagian **Build**, bukan variabel Worker (runtime) di bagian lain halaman Settings.
+   Jangan pakai kotak **Runtime variables and secrets**. Kotak itu menampilkan "Variables cannot be added to a Worker that only has static assets", karena aplikasi ini tidak punya kode server. Variabel Supabase dibaca saat aplikasi dibangun, jadi tempatnya di **Build variables and secrets**.
 
 3. Variabel berlaku mulai build berikutnya, misalnya saat PR di-merge atau ada commit baru di PR.
 

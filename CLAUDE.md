@@ -17,7 +17,7 @@ Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumah
 - IndexedDB lewat Dexie (`dexie-react-hooks` untuk query yang otomatis ter-update). IndexedDB adalah sumber data utama di perangkat.
 - Mulai M5: Supabase (Postgres, Auth, RLS, Storage) lewat `@supabase/supabase-js`.
   - Library ini dimuat lazy (`src/cloud/client.ts`), jadi layar kasir tidak menunggunya.
-  - URL dan publishable key masuk saat build lewat `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, yang diisi sebagai build variables di Cloudflare (bukan `.env` di repo, supaya build e2e tidak menyentuh project asli).
+  - URL dan publishable key masuk saat build lewat `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, yang diisi di Cloudflare **Settings → Build → Build variables and secrets** (bukan `.env` di repo, supaya build e2e tidak menyentuh project asli). Kotak "Runtime variables and secrets" tidak bisa dipakai untuk Worker yang hanya berisi static assets.
   - Tanpa variabel itu, fitur cloud tersembunyi dan aplikasi berjalan lokal saja.
   - Panduan untuk pemilik: `docs/supabase.md`. Aturan sinkron: `docs/sinkron.md`.
 - Deploy: Cloudflare Workers dengan static assets saja, tanpa kode server (gratis, boleh komersial). Konfigurasinya di `wrangler.jsonc`. Panduan: `docs/deploy-cloudflare.md`.
