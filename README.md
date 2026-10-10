@@ -17,8 +17,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai   |
 | M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai   |
 | M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ Selesai   |
-| M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ PR ini    |
-| M3        | Kas, shift, laporan, ekspor CSV                       | Direncanakan |
+| M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ Selesai   |
+| M3        | Kas, shift, laporan, ekspor CSV                       | ✅ PR ini    |
 | M4        | Stok                                                  | Direncanakan |
 | M6        | Pengerasan: void/refund, log audit, panduan pemakaian | Direncanakan |
 
@@ -31,8 +31,18 @@ M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di a
    - mengunggah gambar QRIS toko di **Pengaturan**,
    - menambah kasir dan mengatur ulang PIN di **Pengaturan**,
    - mengelola produk, kategori, varian, dan foto di **Produk**.
-3. Kasir masuk dengan PIN sendiri. Kasir hanya melihat menu **Kasir** dan **Riwayat**.
-4. Alur jualan: ketuk produk → **Bayar** → pilih nominal tunai atau QRIS/Transfer → **Selesaikan**. Struk tampil di layar dan bisa dikirim ke WhatsApp.
+3. Kasir masuk dengan PIN sendiri. Kasir hanya melihat menu **Kasir**, **Riwayat**, dan **Kas**.
+4. Sebelum jualan pertama, **buka kasir**: hitung uang di laci dan isi modal awal.
+5. Alur jualan: ketuk produk → **Bayar** → pilih nominal tunai atau QRIS/Transfer → **Selesaikan**. Struk tampil di layar dan bisa dikirim ke WhatsApp.
+6. Di menu **Kas**, catat uang yang keluar dari laci selain kembalian (misalnya beli es batu) atau uang yang ditambahkan.
+7. Saat selesai, **Kas → Tutup kasir**: hitung uang di laci dan ketik jumlahnya. Angka menurut sistem dan selisihnya baru muncul setelah disimpan. Rekapnya bisa dikirim ke WhatsApp pemilik atau dicetak.
+8. Pemilik melihat **Laporan** harian, mingguan, atau bulanan, yang berisi:
+   - penjualan per produk dan per metode bayar,
+   - laba kotor,
+   - jam paling ramai,
+   - rekap tutup kasir.
+
+   Semua laporan bisa diekspor ke CSV untuk Google Sheets.
 
 Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat.
 

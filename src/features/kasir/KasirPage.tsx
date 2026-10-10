@@ -6,6 +6,8 @@ import type { Product } from '../../db/schema';
 import { formatRupiah } from '../../domain/money';
 import { useImageUrl } from '../../ui/images';
 import { Money, Sheet } from '../../ui/kit';
+import { OpenShiftPanel } from '../kas/OpenShiftPanel';
+import { useOpenShift } from '../kas/useShift';
 import { useCart, useCartCount } from './cart-context';
 import { CartPanel } from './CartPanel';
 import { useCatalog } from './useCatalog';
@@ -14,8 +16,9 @@ import { VariantSheet } from './VariantSheet';
 const ALL = 'all';
 
 export function KasirPage() {
-  const { store } = useSession();
+  const { store, device } = useSession();
   const catalog = useCatalog(store.id);
+  const shift = useOpenShift(device.id);
   const { dispatch, index, priced } = useCart();
   const navigate = useNavigate();
   const count = useCartCount();
@@ -29,7 +32,14 @@ export function KasirPage() {
     return catalog.products.filter((p) => p.categoryId === categoryId);
   }, [catalog, categoryId]);
 
-  if (!catalog || !index) return null;
+  if (!catalog || !index || shift === undefined) return null;
+  if (shift === null) {
+    return (
+      <main className="p-4">
+        <OpenShiftPanel />
+      </main>
+    );
+  }
 
   const tabs = [{ id: ALL, name: 'Semua' }, ...catalog.categories];
   const tapProduct = (product: Product) => {
