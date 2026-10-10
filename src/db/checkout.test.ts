@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { EMPTY_CART, cartReducer, type Cart } from './cart';
 import { completeSale, type SaleInput } from './checkout';
+import { closeShift, openShift } from './shift';
 import { demoDatabase } from '../test/db';
 
 let cleanup: (() => Promise<void>) | null = null;
@@ -12,6 +13,13 @@ afterEach(async () => {
 async function setup() {
   const demo = await demoDatabase();
   cleanup = () => demo.database.delete();
+  const shift = await openShift(demo.database, {
+    storeId: demo.storeId,
+    deviceId: demo.deviceId,
+    userId: demo.cashier.id,
+    openingCash: 100_000,
+    now: '2026-10-08T07:00:00.000Z',
+  });
   const sale = (cart: Cart, overrides: Partial<SaleInput> = {}) =>
     completeSale(demo.database, {
       storeId: demo.storeId,
@@ -23,7 +31,7 @@ async function setup() {
       now: '2026-10-08T07:30:00.000Z',
       ...overrides,
     });
-  return { ...demo, sale };
+  return { ...demo, sale, shift };
 }
 
 const add = (cart: Cart, productId: string, variantIds?: string[]) =>
@@ -131,6 +139,28 @@ describe('completeSale', () => {
     await expect(sale(add(EMPTY_CART, product('Espresso').id))).rejects.toThrow(
       'Produk di keranjang sudah tidak dijual.',
     );
+  });
+
+  it('records the sale in the open shift of the device', async () => {
+    const { sale, product, shift } = await setup();
+    const tx = await sale(add(EMPTY_CART, product('Espresso').id));
+    expect(tx.shiftId).toBe(shift.id);
+  });
+
+  it('saves nothing while the drawer is closed', async () => {
+    const { database, sale, product, shift, cashier } = await setup();
+    await closeShift(database, {
+      shiftId: shift.id,
+      userId: cashier.id,
+      countedCash: 100_000,
+      note: '',
+      now: '2026-10-08T07:10:00.000Z',
+    });
+    await expect(sale(add(EMPTY_CART, product('Espresso').id))).rejects.toThrow(
+      'Kasir belum dibuka.',
+    );
+    expect(await database.transactions.count()).toBe(0);
+    expect(await database.counters.count()).toBe(0);
   });
 
   it('snapshots the store tax settings', async () => {

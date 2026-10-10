@@ -68,6 +68,47 @@ export function percentOf(amount: Rupiah, bps: Bps): Rupiah {
   return Number(divRoundBig(BigInt(amount) * BigInt(bps), BigInt(BPS_PER_100_PERCENT)));
 }
 
+/** `part` as basis points of `whole` (e.g. a margin), rounded; null when `whole` is not positive. */
+export function ratioBps(part: number, whole: number): Bps | null {
+  if (!Number.isSafeInteger(part) || !Number.isSafeInteger(whole)) {
+    throw new RangeError('ratioBps hanya menerima bilangan bulat');
+  }
+  if (whole <= 0) return null;
+  return Number(divRoundBig(BigInt(part) * BigInt(BPS_PER_100_PERCENT), BigInt(whole)));
+}
+
+/**
+ * Splits `total` rupiah over parts in proportion to `weights`, so that the
+ * parts add up to exactly `total` (largest remainder; ties go to the earlier
+ * part). Used to spread a transaction discount over its items.
+ */
+export function allocateProportionally(total: Rupiah, weights: number[]): Rupiah[] {
+  assertRupiah(total, 'jumlah yang dibagi');
+  if (total < 0) throw new RangeError('jumlah yang dibagi tidak boleh negatif');
+  if (weights.some((w) => !Number.isSafeInteger(w) || w < 0)) {
+    throw new RangeError('bobot harus bilangan bulat tidak negatif');
+  }
+  if (weights.length === 0) {
+    if (total !== 0) throw new RangeError('tidak ada bagian untuk dibagi');
+    return [];
+  }
+  const sum = weights.reduce((a, b) => a + BigInt(b), 0n);
+  // Nothing to weigh by (every part is zero): the first part takes it all.
+  if (sum === 0n) return weights.map((_, i) => (i === 0 ? total : 0));
+
+  const big = BigInt(total);
+  const shares = weights.map((w) => (big * BigInt(w)) / sum);
+  const remainders = weights.map((w, i) => ({ i, rest: (big * BigInt(w)) % sum }));
+  let left = big - shares.reduce((a, b) => a + b, 0n);
+  remainders.sort((a, b) => (a.rest === b.rest ? a.i - b.i : a.rest > b.rest ? -1 : 1));
+  for (const { i } of remainders) {
+    if (left === 0n) break;
+    shares[i] = shares[i]! + 1n;
+    left -= 1n;
+  }
+  return shares.map(Number);
+}
+
 /** Converts a percentage typed by a person (e.g. 10 or 12.5) into basis points. */
 export function percentToBps(percent: number): Bps {
   const bps = Math.round(percent * 100);

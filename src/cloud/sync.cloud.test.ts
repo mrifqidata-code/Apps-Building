@@ -4,6 +4,7 @@ import { saveImage } from '../db/images';
 import { completeSale } from '../db/checkout';
 import { PosDatabase } from '../db/db';
 import { touched } from '../db/rows';
+import { addCashMovement, closeShift, openShift } from '../db/shift';
 import { META_DEVICE_ID, META_STORE_ID } from '../db/seed';
 import { anonymousClient, connectedOwnerDevice, engineFor } from '../test/cloud';
 import { createPairingCode, pairWithCode } from './account';
@@ -23,8 +24,16 @@ async function twoDevices() {
   await phone.syncOnce();
   const phoneDeviceId = (await phoneDb.meta.get(META_DEVICE_ID))!.value as string;
 
-  const sell = (database: PosDatabase, deviceId: string, names: string[], now: string) =>
-    completeSale(database, {
+  const sell = async (database: PosDatabase, deviceId: string, names: string[], now: string) => {
+    // Opens the drawer on the first sale (later calls get the open shift back).
+    await openShift(database, {
+      storeId: owner.storeId,
+      deviceId,
+      userId: owner.cashier.id,
+      openingCash: 100_000,
+      now,
+    });
+    return completeSale(database, {
       storeId: owner.storeId,
       deviceId,
       cashier: { id: owner.cashier.id, role: 'cashier' },
@@ -33,6 +42,7 @@ async function twoDevices() {
       amountPaid: 200_000,
       now,
     });
+  };
   return { owner, phoneDb, phone, phoneDeviceId, paired, sell };
 }
 
@@ -102,6 +112,45 @@ describe('Sinkron dua perangkat (Supabase lokal)', () => {
     expect(count).toBe(5);
     expect(await owner.database.transactions.where('pending').equals(1).count()).toBe(0);
     expect(await phoneDb.transactions.where('pending').equals(1).count()).toBe(0);
+  });
+
+  it('a closed shift and its kas masuk/keluar reach the owner', async () => {
+    const { owner, phoneDb, phone, phoneDeviceId, sell } = await twoDevices();
+    await sell(phoneDb, phoneDeviceId, ['Espresso', 'Americano'], '2026-10-09T03:00:00.000Z');
+    const shift = (await phoneDb.shifts.toArray())[0]!;
+    await addCashMovement(phoneDb, {
+      storeId: owner.storeId,
+      deviceId: phoneDeviceId,
+      userId: owner.cashier.id,
+      type: 'out',
+      amount: 12_000,
+      reason: 'Beli es batu',
+      now: '2026-10-09T04:00:00.000Z',
+    });
+    await phone.syncOnce();
+    await closeShift(phoneDb, {
+      shiftId: shift.id,
+      userId: owner.cashier.id,
+      countedCash: 120_000,
+      note: '',
+      now: '2026-10-09T10:00:00.000Z',
+    });
+    await phone.syncOnce();
+    await owner.engine.syncOnce();
+
+    // 100.000 + 33.000 - 12.000 = 121.000 expected, 120.000 counted
+    expect(await owner.database.shifts.get(shift.id)).toMatchObject({
+      closedAt: '2026-10-09T10:00:00.000Z',
+      expectedCash: 121_000,
+      countedCash: 120_000,
+      cashDifference: -1_000,
+    });
+    expect(await owner.database.cashMovements.toArray()).toMatchObject([
+      { shiftId: shift.id, type: 'out', amount: 12_000, reason: 'Beli es batu' },
+    ]);
+    expect(await phoneDb.cashMovements.where('pending').equals(1).count()).toBe(0);
+    const sale = (await owner.database.transactions.toArray())[0]!;
+    expect(sale.shiftId).toBe(shift.id);
   });
 
   it('master data: the latest edit wins on every phone, whichever syncs first', async () => {
