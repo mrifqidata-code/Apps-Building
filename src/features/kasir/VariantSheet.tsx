@@ -84,7 +84,7 @@ export function VariantSheet({
                     onClick={() => toggle(group.id, option.id, group.mode === 'single')}
                     className={`flex min-h-14 flex-col items-start justify-center rounded-xl px-3 text-left ${
                       selected
-                        ? 'bg-teal-50 ring-2 ring-teal-700'
+                        ? 'bg-brand-50 ring-2 ring-brand-700'
                         : 'bg-white ring-1 ring-slate-300'
                     }`}
                   >

@@ -31,7 +31,7 @@ export function UpdatePrompt() {
       {needRefresh && (
         <button
           type="button"
-          className="rounded-lg bg-teal-500 px-4 py-2 font-semibold"
+          className="rounded-lg bg-brand-500 px-4 py-2 font-semibold"
           onClick={() => updateServiceWorker(true)}
         >
           Muat ulang

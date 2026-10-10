@@ -53,7 +53,7 @@ export function AccountPage() {
       {link?.role === 'device' ? (
         <section className={card}>
           <p>HP ini terhubung ke toko sebagai HP kasir. Akun pemilik tidak diperlukan di sini.</p>
-          <Link to="/" className="font-semibold text-teal-800 underline">
+          <Link to="/" className="font-semibold text-brand-800 underline">
             Kembali ke kasir
           </Link>
         </section>
@@ -120,7 +120,7 @@ function AuthForm({ client, relinking }: { client: SupabaseClient; relinking: bo
       }}
       aria-selected={mode === value}
       className={`min-h-12 flex-1 rounded-xl font-semibold ${
-        mode === value ? 'bg-teal-700 text-white' : 'text-slate-700'
+        mode === value ? 'bg-brand-700 text-white' : 'text-slate-700'
       }`}
     >
       {label}

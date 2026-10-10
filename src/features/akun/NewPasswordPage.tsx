@@ -37,7 +37,7 @@ export function NewPasswordPage() {
       {done ? (
         <section className="flex flex-col gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
           <p role="status">Password baru tersimpan.</p>
-          <Link to="/akun" className="font-semibold text-teal-800 underline">
+          <Link to="/akun" className="font-semibold text-brand-800 underline">
             Ke halaman akun
           </Link>
         </section>
@@ -47,7 +47,7 @@ export function NewPasswordPage() {
             Tautan ini tidak berlaku atau sudah kedaluwarsa. Minta tautan baru lewat &quot;Lupa
             password?&quot; di halaman akun.
           </p>
-          <Link to="/akun" className="font-semibold text-teal-800 underline">
+          <Link to="/akun" className="font-semibold text-brand-800 underline">
             Ke halaman akun
           </Link>
         </section>

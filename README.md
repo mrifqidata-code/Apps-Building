@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo/reqap-logo.png" alt="Reqap, POS sederhana untuk UMKM" width="320"></p>
+
 # Reqap: kasir untuk UMKM
 
 **Reqap** adalah aplikasi kasir (POS) berbasis web untuk kedai kopi/minuman, usaha makanan rumahan, dan toko kecil di Indonesia.

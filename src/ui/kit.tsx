@@ -5,11 +5,11 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-teal-700 text-white active:bg-teal-800 disabled:bg-slate-300 disabled:text-slate-500',
+    'bg-brand-700 text-white active:bg-brand-800 disabled:bg-slate-300 disabled:text-slate-500',
   secondary:
     'bg-white text-slate-800 ring-1 ring-slate-300 active:bg-slate-100 disabled:text-slate-400',
   danger: 'bg-white text-red-700 ring-1 ring-red-200 active:bg-red-50',
-  ghost: 'text-teal-800 active:bg-teal-50',
+  ghost: 'text-brand-800 active:bg-brand-50',
 };
 
 export function Button({
@@ -91,7 +91,7 @@ export function Field({
 }
 
 export const inputClass =
-  'min-h-12 w-full rounded-xl bg-white px-3 text-base ring-1 ring-slate-300 outline-none focus:ring-2 focus:ring-teal-600 select-text';
+  'min-h-12 w-full rounded-xl bg-white px-3 text-base ring-1 ring-slate-300 outline-none focus:ring-2 focus:ring-brand-600 select-text';
 
 // Up to Rp999.999.999.999, far beyond any single sale.
 const MAX_MONEY_DIGITS = 12;

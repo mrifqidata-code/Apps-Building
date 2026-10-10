@@ -48,7 +48,7 @@ export function DiscountEditor({
               onChange(null);
             }}
             className={`min-h-12 rounded-xl font-semibold ${
-              type === t ? 'bg-teal-700 text-white' : 'bg-white ring-1 ring-slate-300'
+              type === t ? 'bg-brand-700 text-white' : 'bg-white ring-1 ring-slate-300'
             }`}
           >
             {t === 'amount' ? 'Rupiah (Rp)' : 'Persen (%)'}

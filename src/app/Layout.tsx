@@ -27,7 +27,7 @@ export function Layout() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="shrink-0 bg-teal-700 text-white shadow">
+      <header className="shrink-0 bg-brand-700 text-white shadow">
         <div className="flex items-center gap-3 px-4 pt-3 pb-2">
           <h1 className="flex-1 truncate text-lg font-bold">{store.name}</h1>
           <InstallButton />
@@ -68,7 +68,7 @@ export function Layout() {
                   end={link.end}
                   className={({ isActive }) =>
                     `flex min-h-12 shrink-0 items-center border-b-4 px-3 text-sm font-semibold ${
-                      isActive ? 'border-white' : 'border-transparent text-teal-100'
+                      isActive ? 'border-white' : 'border-transparent text-brand-100'
                     }`
                   }
                 >

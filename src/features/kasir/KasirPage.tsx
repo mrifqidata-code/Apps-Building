@@ -51,7 +51,7 @@ export function KasirPage() {
                 onClick={() => setCategoryId(tab.id)}
                 className={`min-h-12 shrink-0 rounded-full px-5 text-base font-semibold ${
                   selected
-                    ? 'bg-teal-700 text-white'
+                    ? 'bg-brand-700 text-white'
                     : 'bg-white text-slate-700 ring-1 ring-slate-200'
                 }`}
               >
@@ -109,7 +109,7 @@ export function KasirPage() {
             type="button"
             onClick={() => navigate('/bayar')}
             disabled={!priced}
-            className="min-h-14 rounded-xl bg-teal-700 px-6 text-lg font-bold text-white active:bg-teal-800 disabled:bg-slate-300"
+            className="min-h-14 rounded-xl bg-brand-700 px-6 text-lg font-bold text-white active:bg-brand-800 disabled:bg-slate-300"
           >
             Bayar
           </button>
@@ -154,7 +154,7 @@ function ProductTile({
       type="button"
       onClick={onTap}
       aria-label={`${product.name} ${formatRupiah(product.price)}`}
-      className="flex h-full min-h-24 w-full flex-col overflow-hidden rounded-xl bg-white text-left shadow-sm ring-1 ring-slate-200 active:bg-teal-50 active:ring-teal-600"
+      className="flex h-full min-h-24 w-full flex-col overflow-hidden rounded-xl bg-white text-left shadow-sm ring-1 ring-slate-200 active:bg-brand-50 active:ring-brand-600"
     >
       {imageUrl && <img src={imageUrl} alt="" className="aspect-[4/3] w-full object-cover" />}
       <span className="flex flex-1 flex-col justify-between gap-2 p-4">
@@ -162,7 +162,7 @@ function ProductTile({
           <span className="block text-base leading-snug font-semibold">{product.name}</span>
           {hasVariants && <span className="text-sm text-slate-500">Ada pilihan</span>}
         </span>
-        <span className="text-base font-bold text-teal-800">{formatRupiah(product.price)}</span>
+        <span className="text-base font-bold text-brand-800">{formatRupiah(product.price)}</span>
       </span>
     </button>
   );

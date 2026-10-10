@@ -39,7 +39,7 @@ export function CloudSection() {
         </p>
         <Link
           to="/akun"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-teal-700 px-4 font-semibold text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-700 px-4 font-semibold text-white"
         >
           Hubungkan ke akun pemilik
         </Link>
@@ -89,7 +89,7 @@ export function CloudSection() {
       {link.role === 'owner' && !auth.email && (
         <Link
           to="/akun"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-teal-700 px-4 font-semibold text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-700 px-4 font-semibold text-white"
         >
           Masuk lagi ke akun pemilik
         </Link>
@@ -97,7 +97,7 @@ export function CloudSection() {
       {link.role === 'device' && (status.phase === 'revoked' || status.phase === 'signed-out') && (
         <Link
           to="/pasang"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-teal-700 px-4 font-semibold text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand-700 px-4 font-semibold text-white"
         >
           Pasang ulang HP ini
         </Link>
@@ -194,15 +194,15 @@ function Devices({ auth }: { auth: CloudAuth | null }) {
 
       {auth ? (
         pairing ? (
-          <div className="flex flex-col gap-2 rounded-xl bg-teal-50 p-4 text-center">
-            <p className="text-sm text-teal-900">Kode pasang HP kasir</p>
+          <div className="flex flex-col gap-2 rounded-xl bg-brand-50 p-4 text-center">
+            <p className="text-sm text-brand-900">Kode pasang HP kasir</p>
             <p
-              className="font-mono text-4xl font-bold tracking-widest text-teal-900 select-text"
+              className="font-mono text-4xl font-bold tracking-widest text-brand-900 select-text"
               data-testid="kode-pasang"
             >
               {pairing.code}
             </p>
-            <p className="text-sm text-teal-900">
+            <p className="text-sm text-brand-900">
               Berlaku sampai {formatJakartaDateTime(pairing.expiresAt)} WIB, hanya untuk satu HP.
             </p>
             <ol className="list-decimal pl-5 text-left text-sm text-slate-700">

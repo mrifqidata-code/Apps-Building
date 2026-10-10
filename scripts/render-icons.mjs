@@ -1,38 +1,40 @@
-// Renders the Reqap logo (docs/logo/*.svg) into the PNG icons the PWA needs.
+// Builds the app icons from the Reqap logo symbol (docs/logo/reqap-symbol.png).
 // Run after changing the logo: node scripts/render-icons.mjs
 import { chromium } from '@playwright/test';
-import { copyFileSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
-const LOGO = 'docs/logo';
+const symbol = `data:image/png;base64,${readFileSync('docs/logo/reqap-symbol.png').toString('base64')}`;
+
+// [output, size, corner radius (fraction of size), symbol size (fraction of size)]
 const icons = [
-  // [source svg, output png, size]
-  ['reqap-icon.svg', 'public/pwa-192x192.png', 192],
-  ['reqap-icon.svg', 'public/pwa-512x512.png', 512],
-  // Android crops maskable icons to its own shape; the artwork sits in the 80% safe zone.
-  ['reqap-icon-maskable.svg', 'public/maskable-icon-512x512.png', 512],
+  // Regular icons: a white rounded tile, transparent outside the corners.
+  ['public/pwa-192x192.png', 192, 0.22, 0.86],
+  ['public/pwa-512x512.png', 512, 0.22, 0.86],
+  // Android crops maskable icons to its own shape; the symbol stays inside the 80% safe zone.
+  ['public/maskable-icon-512x512.png', 512, 0, 0.66],
   // iOS rounds the corners itself and does not allow transparency.
-  ['reqap-icon-apple.svg', 'public/apple-touch-icon-180x180.png', 180],
-  ['reqap-wordmark.svg', 'docs/logo/reqap-wordmark.png', 0],
+  ['public/apple-touch-icon-180x180.png', 180, 0, 0.8],
+  // Browser tab: as large as possible, details are tiny anyway.
+  ['public/favicon-48x48.png', 48, 0.18, 0.96],
 ];
 
 const browser = await chromium.launch();
-for (const [source, output, size] of icons) {
-  const svg = readFileSync(`${LOGO}/${source}`, 'utf8');
-  const [, , width, height] = svg
-    .match(/viewBox="([\d.\s]+)"/)[1]
-    .split(/\s+/)
-    .map(Number);
-  const w = size || width * 2;
-  const h = size || height * 2;
-  const page = await browser.newPage({ viewport: { width: w, height: h } });
-  await page.setContent(
-    `<style>html,body{margin:0}svg{display:block;width:${w}px;height:${h}px}</style>${svg}`,
-  );
-  await page.locator('svg').screenshot({ path: output, omitBackground: true });
+for (const [output, size, radius, scale] of icons) {
+  const page = await browser.newPage({ viewport: { width: size, height: size } });
+  await page.setContent(`
+    <style>
+      html, body { margin: 0; background: transparent; }
+      .tile {
+        width: ${size}px; height: ${size}px; background: #fff;
+        border-radius: ${radius * size}px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      img { width: ${scale * size}px; height: ${scale * size}px; }
+    </style>
+    <div class="tile"><img src="${symbol}"></div>`);
+  await page.locator('img').evaluate((img) => img.decode());
+  await page.locator('.tile').screenshot({ path: output, omitBackground: true });
   await page.close();
-  console.log(`${output} (${w}×${h})`);
+  console.log(`${output} (${size}×${size})`);
 }
 await browser.close();
-
-copyFileSync(`${LOGO}/reqap-icon.svg`, 'public/favicon.svg');
-console.log('public/favicon.svg');

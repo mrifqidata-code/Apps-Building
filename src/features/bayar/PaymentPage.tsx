@@ -94,7 +94,7 @@ export function PaymentPage() {
               setError(null);
             }}
             className={`min-h-14 rounded-xl text-lg font-semibold ${
-              method === m ? 'bg-teal-700 text-white' : 'bg-white ring-1 ring-slate-300'
+              method === m ? 'bg-brand-700 text-white' : 'bg-white ring-1 ring-slate-300'
             }`}
           >
             {PAYMENT_LABELS[m]}
@@ -113,7 +113,7 @@ export function PaymentPage() {
                 onClick={() => setCash(amount)}
                 className={`min-h-14 rounded-xl text-lg font-semibold tabular-nums ${
                   cash === amount
-                    ? 'bg-teal-50 ring-2 ring-teal-700'
+                    ? 'bg-brand-50 ring-2 ring-brand-700'
                     : 'bg-white ring-1 ring-slate-300'
                 }`}
               >

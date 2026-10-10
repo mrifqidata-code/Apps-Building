@@ -76,13 +76,13 @@ export function LoginPage() {
           <p className="text-sm text-slate-500">Toko sudah memakai aplikasi ini di HP lain?</p>
           <Link
             to="/pasang"
-            className="flex min-h-12 items-center justify-center rounded-xl bg-white font-semibold text-teal-800 ring-1 ring-slate-300"
+            className="flex min-h-12 items-center justify-center rounded-xl bg-white font-semibold text-brand-800 ring-1 ring-slate-300"
           >
             Pasang HP kasir dengan kode
           </Link>
           <Link
             to="/akun"
-            className="flex min-h-12 items-center justify-center rounded-xl font-semibold text-teal-800"
+            className="flex min-h-12 items-center justify-center rounded-xl font-semibold text-brand-800"
           >
             Masuk akun pemilik (email)
           </Link>

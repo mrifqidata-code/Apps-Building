@@ -232,7 +232,7 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
       <label className="flex min-h-12 items-center gap-3">
         <input
           type="checkbox"
-          className="size-6 accent-teal-700"
+          className="size-6 accent-brand-700"
           checked={draft.active}
           onChange={(e) => set({ active: e.target.checked })}
         />
@@ -276,7 +276,7 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
-                  className="size-5 accent-teal-700"
+                  className="size-5 accent-brand-700"
                   checked={g.mode === 'single'}
                   onChange={() => setGroup(g.key, { mode: 'single' })}
                 />
@@ -285,7 +285,7 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
-                  className="size-5 accent-teal-700"
+                  className="size-5 accent-brand-700"
                   checked={g.mode === 'multi'}
                   onChange={() => setGroup(g.key, { mode: 'multi' })}
                 />
@@ -294,7 +294,7 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  className="size-5 accent-teal-700"
+                  className="size-5 accent-brand-700"
                   checked={g.required}
                   onChange={(e) => setGroup(g.key, { required: e.target.checked })}
                 />

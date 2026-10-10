@@ -45,7 +45,7 @@ export function PinPad({
         {Array.from({ length: Math.max(4, pin.length) }, (_, i) => (
           <span
             key={i}
-            className={`size-4 rounded-full ${i < pin.length ? 'bg-teal-700' : 'bg-slate-200'}`}
+            className={`size-4 rounded-full ${i < pin.length ? 'bg-brand-700' : 'bg-slate-200'}`}
           />
         ))}
       </div>
@@ -59,7 +59,7 @@ export function PinPad({
             aria-label={key === 'ok' ? submitLabel : key === 'hapus' ? 'Hapus angka' : key}
             className={`h-16 rounded-2xl text-2xl font-semibold disabled:opacity-40 ${
               key === 'ok'
-                ? 'bg-teal-700 text-base text-white'
+                ? 'bg-brand-700 text-base text-white'
                 : key === 'hapus'
                   ? 'bg-slate-100 text-base text-slate-700'
                   : 'bg-white ring-1 ring-slate-200 active:bg-slate-100'
