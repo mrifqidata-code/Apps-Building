@@ -12,18 +12,18 @@ export default defineConfig({
       // A new version waits for the cashier to tap "Muat ulang" so a
       // transaction in progress is never interrupted by an auto-reload.
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['favicon-48x48.png', 'apple-touch-icon-180x180.png'],
       manifest: {
         id: '/',
-        name: 'POS Sederhana',
-        short_name: 'Kasir',
-        description: 'Aplikasi kasir sederhana untuk UMKM yang tetap jalan tanpa internet.',
+        name: 'Reqap',
+        short_name: 'Reqap',
+        description: 'Reqap, aplikasi kasir untuk UMKM yang tetap jalan tanpa internet.',
         lang: 'id',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'any',
-        theme_color: '#0f766e',
+        theme_color: '#1f5596',
         background_color: '#ffffff',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

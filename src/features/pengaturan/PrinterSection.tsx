@@ -156,7 +156,7 @@ function AutoPrintToggle({ initial }: { initial: boolean }) {
     <label className="flex min-h-12 items-center gap-3">
       <input
         type="checkbox"
-        className="size-6 accent-teal-700"
+        className="size-6 accent-brand-700"
         checked={checked}
         onChange={(e) => {
           setChecked(e.target.checked);

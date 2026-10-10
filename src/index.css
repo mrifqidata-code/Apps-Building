@@ -8,6 +8,19 @@
 @import '@fontsource/poppins/latin-700.css';
 
 @theme {
+  /* Reqap blue, taken from the logo (navy wordmark #123764, blues #2c72b3–#2e95e0). */
+  --color-brand-50: #eef6fd;
+  --color-brand-100: #d8eafb;
+  --color-brand-200: #b3d5f5;
+  --color-brand-300: #7fb8ec;
+  --color-brand-400: #4a9ae2;
+  --color-brand-500: #2a80cf;
+  --color-brand-600: #2569b5;
+  --color-brand-700: #1f5596;
+  --color-brand-800: #1a4479;
+  --color-brand-900: #123764;
+  --color-brand-950: #0b2240;
+
   --font-sans:
     'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial,
     sans-serif;

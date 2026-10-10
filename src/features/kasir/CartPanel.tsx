@@ -57,7 +57,7 @@ export function CartPanel({ onPay }: { onPay?: () => void }) {
                     Diskon -<Money value={lineTotals.discountAmount} />
                   </span>
                 )}
-                <Money value={lineTotals.lineTotal} className="mt-1 font-semibold text-teal-800" />
+                <Money value={lineTotals.lineTotal} className="mt-1 font-semibold text-brand-800" />
               </button>
               <QtyStepper
                 label={resolved.product.name}
@@ -83,7 +83,7 @@ export function CartPanel({ onPay }: { onPay?: () => void }) {
             </Row>
             <button
               type="button"
-              className="flex min-h-10 items-center justify-between text-left text-teal-800"
+              className="flex min-h-10 items-center justify-between text-left text-brand-800"
               onClick={() => setEditingDiscount(true)}
             >
               <span className="font-semibold">

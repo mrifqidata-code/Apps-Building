@@ -1,10 +1,20 @@
-# CLAUDE.md — POS Sederhana untuk UMKM
+# CLAUDE.md — Reqap, kasir untuk UMKM
 
 Panduan kerja untuk Claude Code di repo ini. Perbarui file ini setiap ada keputusan baru.
 
 ## Produk
 
-Aplikasi kasir (POS) web untuk UMKM Indonesia: kedai kopi/minuman, makanan rumahan (termasuk frozen food), dan toko kecil.
+**Reqap**: aplikasi kasir (POS) web untuk UMKM Indonesia, yaitu kedai kopi/minuman, makanan rumahan (termasuk frozen food), dan toko kecil.
+
+- Nama dan logo dari pemilik (9–10 Okt 2026). Logonya: ponsel, struk, dan kanopi warung, warna biru gradasi.
+  - File logo ada di `docs/logo/`:
+    - `reqap-logo-asli.jpg`: file asli dari pemilik.
+    - `reqap-logo.png`: logo lengkap untuk README.
+    - `reqap-symbol.png`: simbol tanpa tulisan, dasar semua ikon.
+  - Ikon PWA, ikon iOS, dan `public/favicon-48x48.png` dibuat dengan `node scripts/render-icons.mjs`.
+  - Nama di manifest: `name`/`short_name` = "Reqap".
+  - Warna UI mengikuti logo: palet `brand-*` (biru) di `@theme` `src/index.css`. Warna utama adalah `brand-700` `#1f5596`, yang juga jadi `theme_color`. Pakai `brand-*` untuk warna utama, jangan warna Tailwind langsung seperti `teal-*`.
+  - Nama internal tetap `pos-sederhana`: package dan **nama database IndexedDB**. Database jangan diganti nama, karena data di HP pengguna akan hilang.
 
 - Skala: satu toko dengan 1–3 perangkat kasir.
 - Perangkat utama: Chrome di HP/tablet Android. Harus tetap bisa dipakai di laptop.

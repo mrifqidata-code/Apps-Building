@@ -50,7 +50,7 @@ export function PairPage() {
         <h1 className="text-xl font-bold">Pasang HP kasir</h1>
         <section className={card}>
           <p>HP ini sudah terhubung ke toko.</p>
-          <Link to="/" className="font-semibold text-teal-800 underline">
+          <Link to="/" className="font-semibold text-brand-800 underline">
             Kembali ke kasir
           </Link>
         </section>
