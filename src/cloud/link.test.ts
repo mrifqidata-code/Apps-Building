@@ -53,7 +53,7 @@ describe('device link', () => {
   });
 });
 
-describe('database upgrade to v2', () => {
+describe('database upgrades', () => {
   it('marks every row from before M5 as not yet sent', async () => {
     const name = `test-${crypto.randomUUID()}`;
     const v1 = new Dexie(name);
@@ -64,5 +64,20 @@ describe('database upgrade to v2', () => {
     const upgraded = new PosDatabase(name);
     databases.push(upgraded);
     expect(await upgraded.products.where('pending').equals(1).primaryKeys()).toEqual(['p1']);
+    expect(await upgraded.cashMovements.count()).toBe(0);
+  });
+
+  it('adds the cash movements table (v3) and keeps pending marks from v2', async () => {
+    const name = `test-${crypto.randomUUID()}`;
+    const v2 = new Dexie(name);
+    v2.version(2).stores({ shifts: 'id, storeId, deviceId, openedAt, pending', meta: 'key' });
+    await v2.table('shifts').add({ id: 's1', storeId: 'st', syncedAt: null, pending: 1 });
+    v2.close();
+
+    const upgraded = new PosDatabase(name);
+    databases.push(upgraded);
+    expect(await upgraded.shifts.where('pending').equals(1).primaryKeys()).toEqual(['s1']);
+    await upgraded.cashMovements.add({ id: 'c1', storeId: 'st', shiftId: 's1' } as never);
+    expect(await upgraded.cashMovements.where('shiftId').equals('s1').count()).toBe(1);
   });
 });

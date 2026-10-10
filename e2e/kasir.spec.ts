@@ -202,7 +202,7 @@ test('kasir tidak bisa membuka menu pemilik atau memberi diskon tanpa izin', asy
   await signIn(page, 'Kasir');
 
   const menu = page.getByRole('navigation', { name: 'Menu utama' });
-  await expect(menu.getByRole('link')).toHaveText(['Kasir', 'Riwayat']);
+  await expect(menu.getByRole('link')).toHaveText(['Kasir', 'Riwayat', 'Kas']);
   await page.goto('/produk');
   await expect(page.getByRole('heading', { name: 'Khusus pemilik' })).toBeVisible();
   await page.goto('/');

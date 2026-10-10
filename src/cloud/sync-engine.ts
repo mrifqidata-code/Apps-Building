@@ -16,6 +16,16 @@ import { mergeRemote } from './merge';
 /** Per server table: the last row this device has pulled. */
 export const META_SYNC_CURSORS = 'syncCursors';
 export const META_LAST_SYNC = 'lastSyncAt';
+/** Server tables seen in the last pull. */
+export const META_SERVER_TABLES = 'serverTables';
+
+/**
+ * Server tables added after M5, each by a SQL file the owner pastes into
+ * Supabase. A server without the table would silently skip its rows, so they
+ * are only sent once a pull has shown the table exists; until then they stay
+ * pending on the device.
+ */
+export const LATER_SERVER_TABLES: ReadonlySet<string> = new Set(['cash_movements']);
 
 export interface SyncOptions {
   /** Rows sent per request. */
@@ -35,7 +45,15 @@ const DEFAULT_OPTIONS: SyncOptions = { batchSize: 300, pageSize: 500, overlapMs:
 export interface SyncReport {
   sent: number;
   failed: number;
+  /** Rows kept back because the server does not have their table yet. */
+  held: number;
   received: number;
+}
+
+interface PushReport {
+  sent: number;
+  failed: number;
+  held: number;
 }
 
 /**
@@ -56,20 +74,26 @@ export class SyncEngine {
   }
 
   async syncOnce(): Promise<SyncReport> {
-    const pushed = await this.push();
+    let pushed = await this.push();
     const received = await this.pull();
+    // The pull may have just shown that the server has a newer table.
+    if (pushed.held > 0) {
+      const again = await this.push();
+      pushed = { sent: pushed.sent + again.sent, failed: again.failed, held: again.held };
+    }
     await this.downloadMissingImages();
     await this.database.meta.put({ key: META_LAST_SYNC, value: nowIso() });
     return { ...pushed, received };
   }
 
-  async push(): Promise<{ sent: number; failed: number }> {
+  async push(): Promise<PushReport> {
     const attempted = new Set<string>();
     let sent = 0;
     let failed = 0;
+    const missing = await this.tablesMissingOnServer();
 
     for (;;) {
-      const batch = await this.collectPending(attempted);
+      const batch = await this.collectPending(attempted, missing);
       if (batch.size === 0) break;
 
       const changes: Record<string, ServerRow[]> = {};
@@ -117,7 +141,28 @@ export class SyncEngine {
         await this.applyServerRows(kept);
       }
     }
-    return { sent, failed };
+
+    let held = 0;
+    for (const name of missing) {
+      held += await this.table(name)
+        .where('pending')
+        .equals(1)
+        .filter((row) => row.storeId === this.storeId)
+        .count();
+    }
+    return { sent, failed, held };
+  }
+
+  /** Local tables whose server table was added later and is not known to exist yet. */
+  private async tablesMissingOnServer(): Promise<Set<SyncedTableName>> {
+    const known = new Set(
+      ((await this.database.meta.get(META_SERVER_TABLES))?.value as string[] | undefined) ?? [],
+    );
+    return new Set(
+      SYNCED_TABLE_NAMES.filter(
+        (name) => LATER_SERVER_TABLES.has(SERVER_TABLE[name]) && !known.has(SERVER_TABLE[name]),
+      ),
+    );
   }
 
   /** Returns how many rows changed on this device. */
@@ -137,6 +182,9 @@ export class SyncEngine {
     let written = 0;
     for (let page = 0; page < 10_000; page++) {
       const result = await this.api.pullChanges(this.storeId, request, this.options.pageSize);
+      if (page === 0) {
+        await this.database.meta.put({ key: META_SERVER_TABLES, value: Object.keys(result) });
+      }
       const grouped = new Map<SyncedTableName, ServerRow[]>();
       let more = false;
       for (const [serverTable, rows] of Object.entries(result)) {
@@ -171,11 +219,15 @@ export class SyncEngine {
     return this.database.table(name);
   }
 
-  private async collectPending(skip: Set<string>): Promise<Map<SyncedTableName, SyncedRow[]>> {
+  private async collectPending(
+    skip: Set<string>,
+    skipTables: Set<SyncedTableName>,
+  ): Promise<Map<SyncedTableName, SyncedRow[]>> {
     const batch = new Map<SyncedTableName, SyncedRow[]>();
     let room = this.options.batchSize;
     for (const name of SYNCED_TABLE_NAMES) {
       if (room <= 0) break;
+      if (skipTables.has(name)) continue;
       const rows = await this.table(name)
         .where('pending')
         .equals(1)

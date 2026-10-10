@@ -19,6 +19,7 @@ export const SERVER_TABLE: Record<SyncedTableName, string> = {
   transactionItems: 'transaction_items',
   stockMovements: 'stock_movements',
   auditLog: 'audit_log',
+  cashMovements: 'cash_movements',
 };
 
 export const LOCAL_TABLE: Record<string, SyncedTableName> = Object.fromEntries(
@@ -36,7 +37,12 @@ export type TableKind = 'lww' | 'transaction' | 'append';
 
 export function tableKind(table: SyncedTableName): TableKind {
   if (table === 'transactions') return 'transaction';
-  if (table === 'transactionItems' || table === 'stockMovements' || table === 'auditLog') {
+  if (
+    table === 'transactionItems' ||
+    table === 'stockMovements' ||
+    table === 'auditLog' ||
+    table === 'cashMovements'
+  ) {
     return 'append';
   }
   return 'lww';

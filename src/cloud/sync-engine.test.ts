@@ -4,6 +4,7 @@ import { completeSale } from '../db/checkout';
 import { PosDatabase } from '../db/db';
 import { saveImage } from '../db/images';
 import { touched } from '../db/rows';
+import { addCashMovement, openShift } from '../db/shift';
 import { demoDatabase } from '../test/db';
 import { FakeCloud } from '../test/fake-cloud';
 import { META_SYNC_CURSORS, SyncEngine } from './sync-engine';
@@ -34,6 +35,41 @@ async function setup() {
 }
 
 describe('SyncEngine', () => {
+  it('keeps kas masuk/keluar on the device until the server has their table', async () => {
+    const { database, storeId, deviceId, cashier, cloud, engine, other, otherEngine } =
+      await setup();
+    // The owner has not pasted the M3 SQL file yet.
+    cloud.serverTables.delete('cash_movements');
+    await openShift(database, {
+      storeId,
+      deviceId,
+      userId: cashier.id,
+      openingCash: 100_000,
+      now: '2026-10-09T02:00:00.000Z',
+    });
+    await addCashMovement(database, {
+      storeId,
+      deviceId,
+      userId: cashier.id,
+      type: 'out',
+      amount: 15_000,
+      reason: 'Beli es batu',
+      now: '2026-10-09T03:00:00.000Z',
+    });
+
+    expect(await engine.syncOnce()).toMatchObject({ held: 1, failed: 0 });
+    expect(await database.cashMovements.where('pending').equals(1).count()).toBe(1);
+    expect(cloud.rows('shifts')).toHaveLength(1);
+
+    cloud.serverTables.add('cash_movements');
+    expect(await engine.syncOnce()).toMatchObject({ sent: 1, held: 0 });
+    expect(await database.cashMovements.where('pending').equals(1).count()).toBe(0);
+    await otherEngine.syncOnce();
+    expect(await other.cashMovements.toArray()).toMatchObject([
+      { type: 'out', amount: 15_000, reason: 'Beli es batu' },
+    ]);
+  });
+
   it('sends every pending row once and clears the marks', async () => {
     const { database, cloud, engine, pendingCount } = await setup();
     const before = await pendingCount(database);
@@ -126,6 +162,13 @@ describe('SyncEngine', () => {
   it('never duplicates sales, even when a sync is repeated', async () => {
     const { database, storeId, deviceId, cashier, product, cloud, engine, otherEngine, other } =
       await setup();
+    await openShift(database, {
+      storeId,
+      deviceId,
+      userId: cashier.id,
+      openingCash: 0,
+      now: '2026-10-09T02:00:00.000Z',
+    });
     for (const name of ['Espresso', 'Americano', 'Teh Tarik']) {
       await completeSale(database, {
         storeId,

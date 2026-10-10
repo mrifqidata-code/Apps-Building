@@ -68,6 +68,13 @@ export function CloudSection() {
         </dd>
       </dl>
       {status.message && status.phase !== 'idle' && <ErrorText>{status.message}</ErrorText>}
+      {status.serverOutdated && (
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          Database cloud belum diperbarui, jadi catatan kas masuk/keluar belum terkirim (tetap aman
+          di HP ini). Pemilik perlu memasang file SQL terbaru di Supabase, lihat panduan
+          &quot;Memperbarui database&quot; di docs/supabase.md.
+        </p>
+      )}
       {status.failed > 0 && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
           {status.failed} data ditolak server dan akan dicoba lagi. Kalau terus terjadi, hubungi

@@ -1,8 +1,13 @@
 import { useSyncExternalStore } from 'react';
 import { db } from '../db/db';
 import { encodePrintJob, rgbaToRaster, type Raster } from '../domain/escpos';
-import { buildReceiptLines, buildTestPageLines } from '../domain/receipt-layout';
+import {
+  buildReceiptLines,
+  buildShiftRecapLines,
+  buildTestPageLines,
+} from '../domain/receipt-layout';
 import type { ReceiptView } from '../domain/receipt-text';
+import type { ShiftRecapView } from '../domain/shift';
 import { nowIso } from '../domain/time';
 import { PrinterManager } from './printer';
 
@@ -49,4 +54,9 @@ export async function printTestPage(storeName: string, logoImageId: string | nul
   await printer.print(encodePrintJob(buildTestPageLines(storeName, nowIso()), logo), {
     allowPicker: true,
   });
+}
+
+/** Tutup kasir recap, printed from a tap (so the printer picker may open). */
+export async function printShiftRecap(view: ShiftRecapView) {
+  await printer.print(encodePrintJob(buildShiftRecapLines(view)), { allowPicker: true });
 }
