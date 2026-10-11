@@ -6,9 +6,11 @@ import { ValidationError, deleteCategory, saveCategory } from '../../db/catalog-
 import { db } from '../../db/db';
 import type { Category } from '../../db/schema';
 import { formatRupiah } from '../../domain/money';
+import { formatStock, isThinMargin, stockStatus } from '../../domain/stock';
 import { nowIso } from '../../domain/time';
 import { Button, ErrorText, Field, Sheet, inputClass } from '../../ui/kit';
 import { errorMessage } from '../../ui/errors';
+import { STOCK_TONE, useStockLevels } from '../stok/useStock';
 
 export function ProductListPage() {
   const { store } = useSession();
@@ -27,6 +29,7 @@ export function ProductListPage() {
     return { categories, products };
   }, [store.id]);
   const [editingCategory, setEditingCategory] = useState<Category | 'new' | null>(null);
+  const stock = useStockLevels(store.id);
 
   if (!data) return null;
   const sections = [
@@ -67,12 +70,28 @@ export function ProductListPage() {
                   to={`/produk/${p.id}`}
                   className="flex min-h-14 items-center gap-3 rounded-xl bg-white px-4 py-2 ring-1 ring-slate-200 active:bg-slate-50"
                 >
-                  <span className="flex-1 font-semibold">{p.name}</span>
-                  {!p.active && (
-                    <span className="rounded bg-slate-100 px-2 py-0.5 text-sm text-slate-600">
-                      Nonaktif
-                    </span>
-                  )}
+                  <span className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-semibold">{p.name}</span>
+                    {!p.active && (
+                      <span className="rounded bg-slate-100 px-2 py-0.5 text-sm text-slate-600">
+                        Nonaktif
+                      </span>
+                    )}
+                    {isThinMargin(p.price, p.cost) && (
+                      <span className="rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-900">
+                        Margin tipis
+                      </span>
+                    )}
+                    {p.trackStock && stock && (
+                      <span
+                        className={`rounded px-2 py-0.5 text-sm tabular-nums ${
+                          STOCK_TONE[stockStatus(stock.get(p.id) ?? 0, p.lowStockThreshold)]
+                        }`}
+                      >
+                        {formatStock(stock.get(p.id) ?? 0, p.lowStockThreshold)}
+                      </span>
+                    )}
+                  </span>
                   <span className="tabular-nums">{formatRupiah(p.price)}</span>
                 </Link>
               </li>

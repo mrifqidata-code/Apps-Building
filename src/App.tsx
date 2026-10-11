@@ -20,6 +20,8 @@ import { SettingsPage } from './features/pengaturan/SettingsPage';
 import { ProductEditPage } from './features/produk/ProductEditPage';
 import { ProductListPage } from './features/produk/ProductListPage';
 import { HistoryPage } from './features/riwayat/HistoryPage';
+import { StockHistoryPage } from './features/stok/StockHistoryPage';
+import { StockPage } from './features/stok/StockPage';
 import { ReceiptPage } from './features/struk/ReceiptPage';
 import { UpdatePrompt } from './pwa/UpdatePrompt';
 
@@ -110,6 +112,22 @@ export function App() {
                 element={
                   <RequireUser>
                     <ShiftRecapPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/stok"
+                element={
+                  <RequireUser>
+                    <StockPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/stok/:id"
+                element={
+                  <RequireUser>
+                    <StockHistoryPage />
                   </RequireUser>
                 }
               />

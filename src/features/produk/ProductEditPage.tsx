@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { useSession, useSignedInUser } from '../../app/session-context';
 import {
   ValidationError,
@@ -12,18 +12,30 @@ import {
 import { db } from '../../db/db';
 import { saveImage } from '../../db/images';
 import type { Category } from '../../db/schema';
-import { formatRupiah } from '../../domain/money';
+import { loadProductStock } from '../../db/stock';
+import { formatBps, formatRupiah } from '../../domain/money';
+import { THIN_MARGIN_BPS, formatStock, isThinMargin, marginBps } from '../../domain/stock';
 import { nowIso } from '../../domain/time';
 import { resizeImage, useImageUrl } from '../../ui/images';
 import { Button, ErrorText, Field, FilePickerButton, MoneyInput, inputClass } from '../../ui/kit';
 import { errorMessage } from '../../ui/errors';
+import { QuantityInput } from '../stok/StockSheets';
 
 const PHOTO_MAX_PX = 600;
 
 /** Form state: money fields may be empty while typing. */
-interface Draft extends Omit<ProductInput, 'price' | 'cost' | 'groups'> {
+interface Draft extends Omit<
+  ProductInput,
+  'price' | 'cost' | 'groups' | 'trackStock' | 'lowStockThreshold' | 'startingStock'
+> {
   price: number | null;
   cost: number | null;
+  trackStock: boolean;
+  lowStockThreshold: number | null;
+  /** Only asked when tracking is switched on. */
+  startingStock: number | null;
+  /** Tracking was already on when the form opened. */
+  wasTracking: boolean;
   groups: (Omit<VariantGroupInput, 'options'> & {
     key: string;
     options: {
@@ -68,6 +80,10 @@ export function ProductEditPage() {
       cost: product.cost,
       imageId: product.imageId,
       active: product.active,
+      trackStock: product.trackStock,
+      lowStockThreshold: product.lowStockThreshold,
+      startingStock: null,
+      wasTracking: product.trackStock,
       groups: groups.map((g) => ({
         key: g.id,
         id: g.id,
@@ -101,6 +117,10 @@ function emptyDraft(categories: Category[]): Draft {
     cost: null,
     imageId: null,
     active: true,
+    trackStock: false,
+    lowStockThreshold: null,
+    startingStock: null,
+    wasTracking: false,
     groups: [],
   };
 }
@@ -118,19 +138,26 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
     set({ groups: draft.groups.map((g) => (g.key === groupKey ? { ...g, ...patch } : g)) });
 
   const margin = draft.price !== null && draft.cost !== null ? draft.price - draft.cost : null;
+  const thinMargins = thinMarginWarnings(draft);
+  const onHand = useLiveQuery(
+    async () => (draft.id && draft.wasTracking ? loadProductStock(db, draft.id) : null),
+    [draft.id, draft.wasTracking],
+  );
 
   const save = async () => {
     setError(null);
     if (draft.price === null) return setError('Harga jual wajib diisi.');
     setSaving(true);
     try {
+      const { wasTracking, startingStock, ...fields } = draft;
       await saveProduct(
         db,
         store.id,
         {
-          ...draft,
+          ...fields,
           price: draft.price,
           cost: draft.cost ?? 0,
+          startingStock: draft.trackStock && !wasTracking ? startingStock : null,
           groups: draft.groups.map((g) => ({
             ...g,
             options: g.options.map((o) => ({
@@ -208,7 +235,23 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
       {margin !== null && (
         <p className={`text-sm ${margin < 0 ? 'text-red-700' : 'text-slate-600'}`}>
           Laba kotor per item: <strong>{formatRupiah(margin)}</strong>
+          {draft.price !== null && draft.price > 0 && (
+            <> (margin {formatBps(marginBps(draft.price, draft.cost ?? 0) ?? 0)})</>
+          )}
         </p>
+      )}
+      {thinMargins.length > 0 && (
+        <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">
+            Margin tipis: di bawah {formatBps(THIN_MARGIN_BPS)} dari harga jual.
+          </p>
+          <ul className="list-disc pl-5">
+            {thinMargins.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+          <p>Periksa lagi harga jual atau HPP. Produk tetap bisa disimpan.</p>
+        </div>
       )}
 
       <div className="flex flex-col gap-1.5">
@@ -243,6 +286,58 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
           </span>
         </span>
       </label>
+
+      <section
+        aria-label="Stok"
+        className="flex flex-col gap-3 rounded-xl bg-white p-4 ring-1 ring-slate-200"
+      >
+        <label className="flex min-h-12 items-center gap-3">
+          <input
+            type="checkbox"
+            className="size-6 accent-brand-700"
+            checked={draft.trackStock}
+            onChange={(e) => set({ trackStock: e.target.checked })}
+          />
+          <span>
+            <span className="font-semibold">Lacak stok</span>
+            <span className="block text-sm text-slate-500">
+              Stok berkurang otomatis saat terjual. Cocok untuk frozen food dan barang kemasan,
+              tidak perlu untuk minuman racikan.
+            </span>
+          </span>
+        </label>
+        {draft.trackStock && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {!draft.wasTracking && (
+              <Field
+                label="Stok sekarang"
+                hint="Hitung barang yang ada. Kosongkan kalau belum tahu (mulai dari 0)."
+              >
+                <QuantityInput
+                  value={draft.startingStock}
+                  onChange={(startingStock) => set({ startingStock })}
+                  label="Stok sekarang"
+                />
+              </Field>
+            )}
+            <Field label="Batas stok menipis" hint="Muncul peringatan saat stok sebanyak ini.">
+              <QuantityInput
+                value={draft.lowStockThreshold}
+                onChange={(lowStockThreshold) => set({ lowStockThreshold })}
+                label="Batas stok menipis"
+              />
+            </Field>
+          </div>
+        )}
+        {draft.trackStock && draft.wasTracking && draft.id && onHand != null && (
+          <p className="text-sm text-slate-600">
+            {formatStock(onHand, draft.lowStockThreshold)}.{' '}
+            <Link to={`/stok/${draft.id}`} className="font-semibold text-brand-800 underline">
+              Stok masuk, opname, dan riwayat
+            </Link>
+          </p>
+        )}
+      </section>
 
       <section className="flex flex-col gap-3" aria-label="Varian">
         <div>
@@ -419,4 +514,27 @@ function ProductForm({ initial, categories }: { initial: Draft; categories: Cate
       </div>
     </main>
   );
+}
+
+/** "Kopi Susu: margin 12%" lines for the product and each variant option that is too thin. */
+function thinMarginWarnings(draft: Draft): string[] {
+  if (draft.price === null) return [];
+  const price = draft.price;
+  const cost = draft.cost ?? 0;
+  const line = (label: string, p: number, c: number) =>
+    `${label}: harga ${formatRupiah(p)}, HPP ${formatRupiah(c)}${
+      p > 0 ? `, margin ${formatBps(marginBps(p, c) ?? 0)}` : ''
+    }`;
+  const out: string[] = [];
+  if (isThinMargin(price, cost)) out.push(line(draft.name.trim() || 'Produk', price, cost));
+  for (const g of draft.groups) {
+    for (const o of g.options) {
+      const p = price + (o.priceDelta ?? 0);
+      const c = cost + (o.costDelta ?? 0);
+      if ((o.priceDelta || o.costDelta) && isThinMargin(p, c)) {
+        out.push(line(`Dengan ${o.name || 'pilihan'}`, p, c));
+      }
+    }
+  }
+  return out;
 }

@@ -202,7 +202,8 @@ test('kasir tidak bisa membuka menu pemilik atau memberi diskon tanpa izin', asy
   await signIn(page, 'Kasir');
 
   const menu = page.getByRole('navigation', { name: 'Menu utama' });
-  await expect(menu.getByRole('link')).toHaveText(['Kasir', 'Riwayat', 'Kas']);
+  // Stok shows because the demo croissant tracks stock (and is empty: badge 1).
+  await expect(menu.getByRole('link')).toHaveText(['Kasir', 'Riwayat', 'Kas', 'Stok1']);
   await page.goto('/produk');
   await expect(page.getByRole('heading', { name: 'Khusus pemilik' })).toBeVisible();
   await page.goto('/');
