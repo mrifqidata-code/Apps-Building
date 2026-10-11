@@ -5,6 +5,7 @@ import { useSyncStatus } from '../cloud/sync-manager';
 import { signOut } from '../db/auth';
 import { db } from '../db/db';
 import { InstallButton } from '../pwa/InstallButton';
+import { useStockAlerts } from '../features/stok/useStock';
 import { useOnlineStatus } from '../ui/useOnlineStatus';
 import { useSession } from './session-context';
 
@@ -15,6 +16,7 @@ export function Layout() {
   const navigate = useNavigate();
   const tone = syncTone(sync, online);
   const { pathname } = useLocation();
+  const stock = useStockAlerts(store.id);
   const nav = useRef<HTMLElement>(null);
 
   // The owner's menu is wider than a phone: keep the current page's tab in view.
@@ -28,6 +30,8 @@ export function Layout() {
     { to: '/', label: 'Kasir', end: true },
     { to: '/riwayat', label: 'Riwayat' },
     { to: '/kas', label: 'Kas' },
+    // Only stores that track stock for some product need this menu.
+    ...(stock?.tracked ? [{ to: '/stok', label: 'Stok', badge: stock.alerts }] : []),
     ...(isOwner
       ? [
           { to: '/laporan', label: 'Laporan' },
@@ -78,13 +82,23 @@ export function Layout() {
                   key={link.to}
                   to={link.to}
                   end={link.end}
+                  aria-label={
+                    'badge' in link && link.badge
+                      ? `${link.label}, ${link.badge} perlu diisi ulang`
+                      : undefined
+                  }
                   className={({ isActive }) =>
-                    `flex min-h-12 shrink-0 items-center border-b-4 px-3 text-sm font-semibold ${
+                    `flex min-h-12 shrink-0 items-center gap-1.5 border-b-4 px-3 text-sm font-semibold ${
                       isActive ? 'border-white' : 'border-transparent text-brand-100'
                     }`
                   }
                 >
                   {link.label}
+                  {'badge' in link && link.badge ? (
+                    <span className="flex min-w-5 items-center justify-center rounded-full bg-amber-300 px-1.5 text-xs font-bold text-amber-950 tabular-nums">
+                      {link.badge}
+                    </span>
+                  ) : null}
                 </NavLink>
               ))}
             </nav>

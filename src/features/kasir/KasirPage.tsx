@@ -4,10 +4,12 @@ import { useSession } from '../../app/session-context';
 import { variantGroupsOf } from '../../db/cart';
 import type { Product } from '../../db/schema';
 import { formatRupiah } from '../../domain/money';
+import { formatStock, stockStatus } from '../../domain/stock';
 import { useImageUrl } from '../../ui/images';
 import { Money, Sheet } from '../../ui/kit';
 import { OpenShiftPanel } from '../kas/OpenShiftPanel';
 import { useOpenShift } from '../kas/useShift';
+import { STOCK_TONE, useStockLevels } from '../stok/useStock';
 import { useCart, useCartCount } from './cart-context';
 import { CartPanel } from './CartPanel';
 import { useCatalog } from './useCatalog';
@@ -19,6 +21,7 @@ export function KasirPage() {
   const { store, device } = useSession();
   const catalog = useCatalog(store.id);
   const shift = useOpenShift(device.id);
+  const stock = useStockLevels(store.id);
   const { dispatch, index, priced } = useCart();
   const navigate = useNavigate();
   const count = useCartCount();
@@ -83,6 +86,7 @@ export function KasirPage() {
                 <ProductTile
                   product={product}
                   hasVariants={catalog.productsWithVariants.has(product.id)}
+                  onHand={product.trackStock ? (stock?.get(product.id) ?? 0) : null}
                   onTap={() => tapProduct(product)}
                 />
               </li>
@@ -152,18 +156,22 @@ export function KasirPage() {
 function ProductTile({
   product,
   hasVariants,
+  onHand,
   onTap,
 }: {
   product: Product;
   hasVariants: boolean;
+  /** null when the product does not track stock. Selling stays possible at 0. */
+  onHand: number | null;
   onTap: () => void;
 }) {
   const imageUrl = useImageUrl(product.imageId);
+  const stockText = onHand === null ? null : formatStock(onHand, product.lowStockThreshold);
   return (
     <button
       type="button"
       onClick={onTap}
-      aria-label={`${product.name} ${formatRupiah(product.price)}`}
+      aria-label={`${product.name} ${formatRupiah(product.price)}${stockText ? `, ${stockText}` : ''}`}
       className="flex h-full min-h-24 w-full flex-col overflow-hidden rounded-xl bg-white text-left shadow-sm ring-1 ring-slate-200 active:bg-brand-50 active:ring-brand-600"
     >
       {imageUrl && <img src={imageUrl} alt="" className="aspect-[4/3] w-full object-cover" />}
@@ -172,7 +180,18 @@ function ProductTile({
           <span className="block text-base leading-snug font-semibold">{product.name}</span>
           {hasVariants && <span className="text-sm text-slate-500">Ada pilihan</span>}
         </span>
-        <span className="text-base font-bold text-brand-800">{formatRupiah(product.price)}</span>
+        <span className="flex flex-wrap items-center justify-between gap-1">
+          <span className="text-base font-bold text-brand-800">{formatRupiah(product.price)}</span>
+          {onHand !== null && stockText && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                STOCK_TONE[stockStatus(onHand, product.lowStockThreshold)]
+              }`}
+            >
+              {stockText}
+            </span>
+          )}
+        </span>
       </span>
     </button>
   );

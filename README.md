@@ -18,8 +18,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai   |
 | M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ Selesai   |
 | M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ Selesai   |
-| M3        | Kas, shift, laporan, ekspor CSV                       | ✅ PR ini    |
-| M4        | Stok                                                  | Direncanakan |
+| M3        | Kas, shift, laporan, ekspor CSV                       | ✅ Selesai   |
+| M4        | Stok                                                  | ✅ PR ini    |
 | M6        | Pengerasan: void/refund, log audit, panduan pemakaian | Direncanakan |
 
 M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di atas data dari semua perangkat.
@@ -43,6 +43,13 @@ M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di a
    - rekap tutup kasir.
 
    Semua laporan bisa diekspor ke CSV untuk Google Sheets.
+
+9. **Stok** (opsional, per produk):
+   - Pemilik menyalakan **Lacak stok** di halaman produk, misalnya untuk frozen food. Isi juga stok sekarang dan batas menipis.
+   - Stok berkurang otomatis saat terjual. Label "Sisa 3" atau "Habis" muncul di layar kasir, dan menu **Stok** menunjukkan berapa produk yang perlu diisi ulang. Produk yang habis tetap bisa dijual.
+   - Kasir mencatat barang datang lewat **Stok → + Stok masuk**.
+   - Pemilik menghitung ulang lewat **Opname**. Selisihnya tercatat di riwayat dan log audit.
+   - Halaman produk memperingatkan **margin tipis** kalau HPP sudah lebih dari 80% harga jual.
 
 Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat.
 

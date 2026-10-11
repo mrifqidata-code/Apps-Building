@@ -103,12 +103,15 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `period.ts`: periode harian, mingguan (Senin–Minggu), dan bulanan dalam WIB.
   - `shift.ts`: ringkasan laci (`summarizeShift`), teks rekap tutup kasir.
   - `csv.ts` dan `report-csv.ts`: ekspor CSV.
+  - `stock.ts`: hitung stok (`stockOnHand`), status Habis/Sisa/Stok, dan margin tipis (`isThinMargin`, 20%).
 - `src/db/`: layanan Dexie.
   - `checkout.ts` `completeSale`: satu transaksi IndexedDB untuk nomor struk + transaksi + item + mutasi stok. Harga **selalu dibaca ulang dari katalog** saat bayar, jadi jangan percaya harga dari state UI.
   - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
   - `catalog-admin.ts`: simpan produk/varian/kategori/pengaturan + audit perubahan harga, HPP, dan pengaturan.
   - `auth.ts`: PIN, sesi, dan tambah kasir.
   - `shift.ts`: `openShift`, `addCashMovement`, `closeShift`, `getOpenShift`. Satu HP maksimal punya satu shift terbuka.
+  - `stock.ts`: `addStockIn` (semua pengguna), `recordStockOpname` (hanya pemilik, ditegakkan di fungsi dan tercatat di `auditLog`), `loadStockLevels`.
+  - `saveProduct` bisa menyalakan `trackStock`, mengisi `lowStockThreshold`, dan mencatat stok awal sebagai opname ("Stok awal").
 - `src/cloud/`: akun dan sinkron (M5).
   - `sync-engine.ts` `SyncEngine`: push baris `pending` lewat RPC `push_changes`, pull lewat `pull_changes` dengan kursor per tabel (mundur 60 detik), lalu unduh file gambar.
   - `merge.ts`: aturan konflik di HP. Harus sama dengan trigger di SQL.
@@ -153,7 +156,9 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 - Test e2e printer memakai printer tiruan di `e2e/printer-mocks.ts`, yang merekam semua byte ke `window.__printed`.
 - Test e2e memakai helper di `e2e/helpers.ts`. Layout HP memakai bottom bar dan sheet keranjang, sedangkan laptop (≥1024px) memakai panel keranjang di kanan.
   - `signIn` otomatis membuka kasir dengan modal Rp0 kalau mendarat di layar Kasir. Pakai `{ openDrawer: false }` untuk melihat panel "Buka kasir".
-- Menu: kasir melihat Kasir, Riwayat, Kas. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
+- Menu: kasir melihat Kasir, Riwayat, Kas, dan Stok. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
+  - **Stok** hanya muncul kalau ada produk yang dilacak stoknya (toko demo: Croissant Butter).
+  - Menu itu memakai angka penanda jumlah produk yang habis atau menipis. Teks link-nya jadi "Stok1", dan nama aksesibelnya "Stok, 1 perlu diisi ulang". Di e2e, cari link menu dengan `exact: true`.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
 
@@ -170,7 +175,12 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `cashMovements` (M3, Dexie v3): kas masuk/keluar saat shift, hanya bisa ditambah. Di server: `cash_movements` (file SQL M3).
   - Khusus lokal (tidak disinkron): `counters` dan `meta` (`storeId` dan `deviceId` aktif).
 - Item transaksi menyimpan **snapshot** nama, harga, HPP, dan varian. Transaksi menyimpan snapshot persen pajak dan layanan.
-- **Stok** = jumlah `stockMovements.qtyDelta`. Tidak ada kolom stok yang disinkron.
+- **Stok** dihitung dari `stockMovements` (`src/domain/stock.ts`). Tidak ada kolom stok yang disinkron.
+  - Tanpa opname, stok = jumlah semua `qtyDelta`.
+  - Dengan opname, stok = `countedQty` opname terakhir + `qtyDelta` mutasi sesudahnya (urutan `createdAt`, lalu `id`).
+  - Akibatnya, penjualan dari HP offline yang tersinkron setelah opname tidak terhitung dua kali.
+  - `qtyDelta` pada baris opname hanya selisih menurut HP itu, untuk riwayat.
+  - Stok dihitung ulang dari mutasi produk yang dilacak setiap kali tabel berubah. Ini cukup untuk skala satu toko; kalau mulai lambat, tambahkan cache lokal.
 - **Mengubah indeks Dexie:** tambahkan `this.version(n+1)` beserta upgrade. Jangan pernah mengedit versi lama.
 - **Menambah tabel yang disinkron:**
   - Taruh namanya di **akhir** `SYNCED_TABLE_NAMES`. Upgrade v2 hanya memakai 14 tabel pertama, karena tabel yang lebih baru belum ada saat upgrade itu berjalan.
@@ -221,6 +231,14 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
       - pemisah koma, UTF-8 dengan BOM, akhir baris CRLF;
       - angka selalu bilangan bulat tanpa "Rp"/titik, dan tidak ada desimal (margin tidak diekspor);
       - teks yang diawali `= + - @` diberi tanda `'` supaya tidak dijalankan sebagai formula.
+
+12. **Stok (M4, disetujui 11 Okt 2026):**
+    - Pelacakan stok dinyalakan per produk.
+    - **Kasir** boleh mencatat stok masuk. **Stok opname hanya pemilik** dan tercatat di log audit.
+    - Stok masuk hanya mencatat jumlah dan catatan; HPP tetap diubah manual di halaman produk.
+    - **Stok habis tetap bisa dijual**, dengan label "Habis" (stok bisa minus). Alasannya, HP lain mungkin offline, jadi angka stok di satu HP belum tentu tepat.
+    - **Margin tipis** = margin di bawah 20% dari harga jual (`THIN_MARGIN_BPS`). Muncul sebagai peringatan, tapi produk tetap bisa disimpan. Varian dengan selisih harga/HPP juga diperiksa.
+    - Tidak ada SQL baru: kolom `track_stock`, `low_stock_threshold`, dan tabel `stock_movements` sudah ada sejak M5.
 
 ### Asumsi MVP
 

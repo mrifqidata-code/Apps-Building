@@ -45,7 +45,10 @@ Aturan ini berlaku di **dua tempat dengan isi yang sama**: trigger di database (
 
 Akibat yang perlu diketahui:
 
-- **Stok tidak pernah bentrok.** Stok adalah jumlah `qtyDelta` dari semua mutasi, jadi penjualan bersamaan di dua HP sama-sama terhitung.
+- **Stok tidak pernah bentrok.** Stok dihitung dari mutasi (`src/domain/stock.ts`), bukan disimpan sebagai angka, jadi penjualan bersamaan di dua HP sama-sama terhitung.
+  - Tanpa stok opname, stok = jumlah semua `qtyDelta`.
+  - Dengan stok opname, stok = hasil hitung opname terakhir + mutasi yang dibuat sesudahnya (urutan `createdAt`, lalu `id`).
+  - Contoh: HP kasir offline menjual 2 pukul 10.00, lalu pemilik menghitung rak pukul 11.00 sebelum penjualan itu tersinkron. Penjualan itu tidak dikurangi lagi, karena 2 barang itu sudah tidak ada di rak saat dihitung.
 - **Nomor struk tidak pernah bentrok.** Setiap HP punya kode sendiri (K1, K2, …) yang dibagikan server saat HP dipasang. Kode perangkat tidak bisa diubah.
 - **Edit bersamaan pada baris yang sama:** yang terakhir menang untuk seluruh baris. Contoh: HP A mengubah harga pukul 10.00 dan HP B mengubah nama produk yang sama pukul 10.05. Hasilnya, versi HP B dipakai, termasuk harga lamanya. Ini jarang terjadi karena data master hanya diubah pemilik.
 - **Shift (buka/tutup kasir)** adalah data master milik satu HP: dibuka dan ditutup di HP yang sama, jadi praktis tidak pernah bentrok. Saat tutup kasir, HP menyimpan angka "seharusnya di laci", uang fisik, dan selisihnya di baris shift. Laporan pemilik memakai angka yang tersimpan itu.
