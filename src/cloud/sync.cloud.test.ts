@@ -5,6 +5,7 @@ import { completeSale } from '../db/checkout';
 import { PosDatabase } from '../db/db';
 import { touched } from '../db/rows';
 import { addCashMovement, closeShift, openShift } from '../db/shift';
+import { addStockIn, loadProductStock, recordStockOpname } from '../db/stock';
 import { META_DEVICE_ID, META_STORE_ID } from '../db/seed';
 import { anonymousClient, connectedOwnerDevice, engineFor } from '../test/cloud';
 import { createPairingCode, pairWithCode } from './account';
@@ -151,6 +152,48 @@ describe('Sinkron dua perangkat (Supabase lokal)', () => {
     expect(await phoneDb.cashMovements.where('pending').equals(1).count()).toBe(0);
     const sale = (await owner.database.transactions.toArray())[0]!;
     expect(sale.shiftId).toBe(shift.id);
+  });
+
+  it('stock stays right with stok masuk, sales on both phones and an opname', async () => {
+    const { owner, phoneDb, phone, phoneDeviceId, sell } = await twoDevices();
+    const croissant = owner.product('Croissant Butter').id;
+    await addStockIn(owner.database, {
+      storeId: owner.storeId,
+      productId: croissant,
+      qty: 20,
+      note: '',
+      userId: owner.cashier.id,
+      now: '2026-10-09T01:00:00.000Z',
+    });
+    await owner.engine.syncOnce();
+    await phone.syncOnce();
+    expect(await loadProductStock(phoneDb, croissant)).toBe(20);
+
+    // The phone sells 2 while offline; the owner sells 1, then counts 17 on the shelf.
+    await sell(
+      phoneDb,
+      phoneDeviceId,
+      ['Croissant Butter', 'Croissant Butter'],
+      '2026-10-09T03:00:00.000Z',
+    );
+    await sell(owner.database, owner.deviceId, ['Croissant Butter'], '2026-10-09T03:05:00.000Z');
+    await recordStockOpname(owner.database, {
+      storeId: owner.storeId,
+      productId: croissant,
+      countedQty: 17,
+      note: '',
+      actor: { userId: owner.owner.id, deviceId: owner.deviceId, role: 'owner' },
+      now: '2026-10-09T04:00:00.000Z',
+    });
+    // The phone's 2 were already off the shelf when counted: not taken off again.
+    for (const engine of [phone, owner.engine, phone]) await engine.syncOnce();
+    expect(await loadProductStock(owner.database, croissant)).toBe(17);
+    expect(await loadProductStock(phoneDb, croissant)).toBe(17);
+
+    await sell(phoneDb, phoneDeviceId, ['Croissant Butter'], '2026-10-09T05:00:00.000Z');
+    for (const engine of [phone, owner.engine]) await engine.syncOnce();
+    expect(await loadProductStock(owner.database, croissant)).toBe(16);
+    expect(await loadProductStock(phoneDb, croissant)).toBe(16);
   });
 
   it('master data: the latest edit wins on every phone, whichever syncs first', async () => {

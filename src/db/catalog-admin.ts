@@ -2,6 +2,7 @@ import { assertRupiah, type Rupiah } from '../domain/money';
 import type { IsoDateTime } from '../domain/time';
 import type { PosDatabase } from './db';
 import { newRow, touched } from './rows';
+import { writeOpname } from './stock';
 import type {
   AuditAction,
   AuditLogEntry,
@@ -139,12 +140,25 @@ export interface ProductInput {
   imageId: string | null;
   active: boolean;
   groups: VariantGroupInput[];
+  /** Left out: unchanged (new products start without stock tracking). */
+  trackStock?: boolean;
+  lowStockThreshold?: number | null;
+  /** Counted stock when tracking is switched on; recorded as a stock opname. */
+  startingStock?: number | null;
+}
+
+function wholeCount(value: number | null | undefined, label: string): number | null | undefined {
+  if (value === null || value === undefined) return value;
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new ValidationError(`${label} harus angka bulat, mulai dari 0.`);
+  }
+  return value;
 }
 
 /**
  * Creates or updates a product with its variant groups. Groups and options
  * missing from the input are soft-deleted. Price and HPP changes go to the
- * audit log.
+ * audit log. A starting stock is recorded as a stock opname.
  */
 export async function saveProduct(
   database: PosDatabase,
@@ -156,6 +170,8 @@ export async function saveProduct(
   const name = cleanName(input.name, 'Nama produk');
   const price = cleanMoney(input.price, 'Harga jual');
   const cost = cleanMoney(input.cost, 'HPP');
+  const lowStockThreshold = wholeCount(input.lowStockThreshold, 'Batas stok menipis');
+  const startingStock = wholeCount(input.startingStock, 'Stok sekarang');
   const groups = input.groups.map((g) => {
     const options = g.options.map((o) => ({
       ...o,
@@ -169,7 +185,13 @@ export async function saveProduct(
 
   return database.transaction(
     'rw',
-    [database.products, database.variantGroups, database.productVariants, database.auditLog],
+    [
+      database.products,
+      database.variantGroups,
+      database.productVariants,
+      database.auditLog,
+      database.stockMovements,
+    ],
     async () => {
       let productId = input.id;
       if (productId) {
@@ -183,6 +205,8 @@ export async function saveProduct(
           cost,
           imageId: input.imageId,
           active: input.active,
+          ...(input.trackStock === undefined ? {} : { trackStock: input.trackStock }),
+          ...(lowStockThreshold === undefined ? {} : { lowStockThreshold }),
           ...touched(now),
         });
         const audits: AuditLogEntry[] = [];
@@ -228,8 +252,8 @@ export async function saveProduct(
           cost,
           imageId: input.imageId,
           active: input.active,
-          trackStock: false,
-          lowStockThreshold: null,
+          trackStock: input.trackStock ?? false,
+          lowStockThreshold: lowStockThreshold ?? null,
           sortOrder: Math.max(-1, ...inCategory.map((p) => p.sortOrder)) + 1,
         };
         await database.products.add(product);
@@ -237,6 +261,16 @@ export async function saveProduct(
       }
 
       await syncVariants(database, storeId, productId, groups, now);
+      if (startingStock !== null && startingStock !== undefined) {
+        await writeOpname(database, {
+          storeId,
+          productId,
+          countedQty: startingStock,
+          note: 'Stok awal',
+          actor,
+          now,
+        });
+      }
       return productId;
     },
   );
