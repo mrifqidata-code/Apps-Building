@@ -85,6 +85,13 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 - **Dependensi:** jangan menambah dependensi besar tanpa alasan. Jelaskan setiap dependensi baru di deskripsi PR.
 - **Tanya pemilik produk dulu** untuk pilihan yang memengaruhi biaya, keamanan, atau data pelanggan.
 
+## Laporan dan kas (`src/domain/report.ts`, `src/domain/shift.ts`)
+
+- Laporan dihitung dari snapshot di transaksi dan item, jadi mengubah harga atau HPP tidak mengubah laporan lama.
+- Transaksi yang itemnya belum tersinkron tetap dihitung, dengan HPP 0, dan ditandai di `missingItems`.
+- Rekap tutup kasir memakai `expectedCash`, `countedCash`, dan `cashDifference` yang disimpan di baris shift saat ditutup.
+- Layar: `/kas` (buka kasir, kas masuk/keluar), `/kas/tutup`, `/kas/:id` (rekap, kirim WA, cetak ESC/POS lewat `buildShiftRecapLines`), dan `/laporan` (khusus pemilik).
+
 ## Struktur dan pola kode
 
 - `src/domain/`: logika murni tanpa React/Dexie, semuanya dengan unit test.
@@ -92,11 +99,16 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `cash.ts`: tombol nominal cepat.
   - `pin.ts`: hash PBKDF2 dan kunci 5x salah.
   - `receipt-text.ts`: teks struk dan link `wa.me`.
+  - `report.ts`: laporan penjualan (lihat "Laporan dan kas" di bawah).
+  - `period.ts`: periode harian, mingguan (Senin–Minggu), dan bulanan dalam WIB.
+  - `shift.ts`: ringkasan laci (`summarizeShift`), teks rekap tutup kasir.
+  - `csv.ts` dan `report-csv.ts`: ekspor CSV.
 - `src/db/`: layanan Dexie.
   - `checkout.ts` `completeSale`: satu transaksi IndexedDB untuk nomor struk + transaksi + item + mutasi stok. Harga **selalu dibaca ulang dari katalog** saat bayar, jadi jangan percaya harga dari state UI.
   - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
   - `catalog-admin.ts`: simpan produk/varian/kategori/pengaturan + audit perubahan harga, HPP, dan pengaturan.
   - `auth.ts`: PIN, sesi, dan tambah kasir.
+  - `shift.ts`: `openShift`, `addCashMovement`, `closeShift`, `getOpenShift`. Satu HP maksimal punya satu shift terbuka.
 - `src/cloud/`: akun dan sinkron (M5).
   - `sync-engine.ts` `SyncEngine`: push baris `pending` lewat RPC `push_changes`, pull lewat `pull_changes` dengan kursor per tabel (mundur 60 detik), lalu unduh file gambar.
   - `merge.ts`: aturan konflik di HP. Harus sama dengan trigger di SQL.
@@ -109,6 +121,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - Jangan mengedit migration yang sudah dipasang pemilik. Tambahkan file baru.
   - Pemilik memasang SQL dengan salin-tempel di SQL Editor (keputusan 10).
 - Batas diskon kasir ditegakkan di `completeSale` (bukan hanya di UI).
+- `completeSale` mengisi `shiftId` dengan shift yang sedang buka di HP itu. Tanpa shift terbuka, penjualan ditolak ("Kasir belum dibuka").
 - UI:
   - `react-router` (mode deklaratif, `BrowserRouter`).
   - Halaman pemilik dibungkus `RequireOwner`.
@@ -119,6 +132,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `pinAttempts:<userId>`: hitungan PIN salah.
   - `cloudLink`: `{storeId, role: 'owner' | 'device', linkedAt}` kalau HP terhubung ke cloud.
   - `syncCursors` dan `lastSyncAt`: posisi pull per tabel dan waktu sinkron terakhir.
+  - `serverTables`: tabel yang dimiliki server (dari pull terakhir).
   - `printer`: satu-satunya entri yang tetap ada saat HP dipindah ke toko lain.
 - UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
 - Font UI: **Poppins** (permintaan pemilik, 9 Okt 2026).
@@ -138,6 +152,8 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 - PDF (`src/features/struk/pdf.ts`): `window.print()` hanya untuk elemen `[data-print-area]`, dengan `@page` selebar 58 mm dan tinggi sesuai struk (diukur lewat `.print-measure`, lihat `index.css`).
 - Test e2e printer memakai printer tiruan di `e2e/printer-mocks.ts`, yang merekam semua byte ke `window.__printed`.
 - Test e2e memakai helper di `e2e/helpers.ts`. Layout HP memakai bottom bar dan sheet keranjang, sedangkan laptop (≥1024px) memakai panel keranjang di kanan.
+  - `signIn` otomatis membuka kasir dengan modal Rp0 kalau mendarat di layar Kasir. Pakai `{ openDrawer: false }` untuk melihat panel "Buka kasir".
+- Menu: kasir melihat Kasir, Riwayat, Kas. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
 
@@ -151,10 +167,15 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `categories`, `products`, `variantGroups` (single = Ukuran, multi = Tambahan), `productVariants`
   - `customers`, `shifts`, `transactions`, `transactionItems`
   - `stockMovements`, `auditLog`, `images`
+  - `cashMovements` (M3, Dexie v3): kas masuk/keluar saat shift, hanya bisa ditambah. Di server: `cash_movements` (file SQL M3).
   - Khusus lokal (tidak disinkron): `counters` dan `meta` (`storeId` dan `deviceId` aktif).
 - Item transaksi menyimpan **snapshot** nama, harga, HPP, dan varian. Transaksi menyimpan snapshot persen pajak dan layanan.
 - **Stok** = jumlah `stockMovements.qtyDelta`. Tidak ada kolom stok yang disinkron.
 - **Mengubah indeks Dexie:** tambahkan `this.version(n+1)` beserta upgrade. Jangan pernah mengedit versi lama.
+- **Menambah tabel yang disinkron:**
+  - Taruh namanya di **akhir** `SYNCED_TABLE_NAMES`. Upgrade v2 hanya memakai 14 tabel pertama, karena tabel yang lebih baru belum ada saat upgrade itu berjalan.
+  - Tambahkan nama tabel servernya ke `LATER_SERVER_TABLES` (`sync-engine.ts`). Server yang belum dipasangi SQL baru melewati tabel asing tanpa error, jadi HP baru mengirim barisnya setelah pull membuktikan tabelnya ada.
+  - File SQL-nya harus bisa dijalankan dua kali (`if not exists`, `drop … if exists`, `create or replace`).
 
 ## Keputusan yang sudah disetujui (Okt 2026)
 
@@ -187,6 +208,19 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
    - Email bawaan Supabase cukup karena email pemilik sama dengan akun Supabase-nya. Email bawaan hanya mengirim ke anggota tim, maks. ±2 per jam.
    - MVP: satu akun pemilik untuk satu toko.
 10. **Perubahan database** dipasang pemilik dengan salin-tempel file SQL di SQL Editor Supabase. Tidak ada token Supabase yang disimpan di GitHub.
+
+11. **Kas dan laporan (M3, disetujui 10 Okt 2026):**
+    - Kasir wajib **buka kasir** (modal awal) sebelum transaksi pertama. Satu shift per HP, dipakai bergantian oleh semua pengguna di HP itu.
+    - **Kas masuk/keluar** (misalnya beli es batu) dicatat dengan nominal dan alasan, lalu ikut dihitung saat tutup kasir.
+    - **Tutup kasir "hitung dulu":** kasir mengetik uang fisik tanpa melihat angka sistem. Angka "seharusnya di laci" dan selisihnya baru muncul setelah disimpan. Angka itu hanya terlihat oleh pemilik selama shift berjalan.
+    - Seharusnya di laci = modal awal + penjualan tunai + kas masuk − kas keluar. Transaksi void/refund tidak dihitung.
+    - **Laba kotor:** penjualan bersih = total − biaya layanan − PB1 (harga setelah diskon, tanpa pajak dan layanan). Laba kotor = penjualan bersih − HPP. PB1 dan layanan ditampilkan terpisah.
+    - Diskon transaksi dibagi ke item secara proporsional terhadap total item (`allocateProportionally`, sisa terbesar), supaya laba per produk tepat.
+    - **Laporan** hanya untuk pemilik. Isinya data semua HP yang sudah tersinkron ke HP itu. Minggu dihitung Senin–Minggu.
+    - **CSV untuk Google Sheets:**
+      - pemisah koma, UTF-8 dengan BOM, akhir baris CRLF;
+      - angka selalu bilangan bulat tanpa "Rp"/titik, dan tidak ada desimal (margin tidak diekspor);
+      - teks yang diawali `= + - @` diberi tanda `'` supaya tidak dijalankan sebagai formula.
 
 ### Asumsi MVP
 

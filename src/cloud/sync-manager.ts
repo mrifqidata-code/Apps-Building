@@ -32,6 +32,8 @@ export interface SyncStatus {
   failed: number;
   lastSyncAt: string | null;
   message: string | null;
+  /** Some rows wait because the owner has not pasted the newest SQL file into Supabase. */
+  serverOutdated: boolean;
 }
 
 const OFF: SyncStatus = {
@@ -41,6 +43,7 @@ const OFF: SyncStatus = {
   failed: 0,
   lastSyncAt: null,
   message: null,
+  serverOutdated: false,
 };
 
 const INTERVAL_MS = 30_000;
@@ -173,8 +176,13 @@ export class SyncManager {
     this.set({ phase: 'syncing' });
     try {
       await this.refreshLastSeen();
-      await engine.syncOnce();
-      this.set({ phase: 'idle', lastSyncAt: nowIso(), message: null });
+      const report = await engine.syncOnce();
+      this.set({
+        phase: 'idle',
+        lastSyncAt: nowIso(),
+        message: null,
+        serverOutdated: report.held > 0,
+      });
     } catch (e) {
       const kind = e instanceof CloudError ? e.kind : 'offline';
       const phase: SyncPhase =

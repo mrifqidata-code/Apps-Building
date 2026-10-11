@@ -110,6 +110,7 @@ export interface Customer extends SyncedRow {
   whatsapp: string | null;
 }
 
+/** Buka kasir to tutup kasir on one device. At most one open shift (closedAt null) per device. */
 export interface Shift extends SyncedRow {
   deviceId: string;
   openedBy: string;
@@ -119,9 +120,27 @@ export interface Shift extends SyncedRow {
   closedAt: IsoDateTime | null;
   /** Cash the system expects in the drawer at close. */
   expectedCash: Rupiah | null;
+  /** Counted by the cashier before seeing expectedCash. */
   countedCash: Rupiah | null;
+  /** countedCash - expectedCash: positive = more than expected. */
   cashDifference: Rupiah | null;
   note: string | null;
+}
+
+export type CashMovementType = 'in' | 'out';
+
+/**
+ * Cash put into or taken out of the drawer during a shift that is not a sale,
+ * e.g. buying ice or adding small change. Append-only.
+ */
+export interface CashMovement extends SyncedRow {
+  shiftId: string;
+  deviceId: string;
+  type: CashMovementType;
+  /** Always positive; `type` says which way it went. */
+  amount: Rupiah;
+  reason: string;
+  userId: string;
 }
 
 export type DiscountType = 'amount' | 'percent';

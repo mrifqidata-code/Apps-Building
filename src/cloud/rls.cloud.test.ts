@@ -16,7 +16,15 @@ describe('RLS: data satu toko tidak bisa diakses toko lain', () => {
     const own = await a.client.from('products').select('id').eq('store_id', a.storeId);
     expect(own.data).toHaveLength(15);
 
-    for (const table of ['stores', 'users', 'products', 'transactions', 'audit_log']) {
+    for (const table of [
+      'stores',
+      'users',
+      'products',
+      'shifts',
+      'transactions',
+      'audit_log',
+      'cash_movements',
+    ]) {
       const { data, error } = await b.client.from(table).select('id').eq('store_id', a.storeId);
       expect(error).toBeNull();
       expect(data).toEqual([]);
@@ -115,6 +123,36 @@ describe('RLS: data satu toko tidak bisa diakses toko lain', () => {
 
     const item = await a.client.from('audit_log').update({ reason: 'x' }).eq('store_id', a.storeId);
     expect(item.error?.message).toContain('permission denied');
+
+    // Kas masuk/keluar is append-only too.
+    const movement = {
+      id: crypto.randomUUID(),
+      store_id: a.storeId,
+      created_at: '2026-10-09T03:00:00.000Z',
+      updated_at: '2026-10-09T03:00:00.000Z',
+      shift_id: crypto.randomUUID(),
+      device_id: a.deviceId,
+      type: 'out',
+      amount: 10000,
+      reason: 'Beli es batu',
+      user_id: a.cashier.id,
+    };
+    expect((await a.client.from('cash_movements').insert(movement)).error).toBeNull();
+    const edit = await a.client.from('cash_movements').update({ amount: 1 }).eq('id', movement.id);
+    expect(edit.error?.message).toContain('permission denied');
+    const drop = await a.client.from('cash_movements').delete().eq('id', movement.id);
+    expect(drop.error?.message).toContain('permission denied');
+    // Pushed again with another amount: the first version stays.
+    await a.client.rpc('push_changes', {
+      p_store_id: a.storeId,
+      p_changes: { cash_movements: [{ ...movement, amount: 1 }] },
+    });
+    const kept = await a.client.from('cash_movements').select('amount').eq('id', movement.id);
+    expect(kept.data).toEqual([{ amount: 10000 }]);
+    const zero = await a.client
+      .from('cash_movements')
+      .insert({ ...movement, id: crypto.randomUUID(), amount: 0 });
+    expect(zero.error?.message).toContain('check constraint');
   });
 
   it('a visitor without an account sees nothing', async () => {

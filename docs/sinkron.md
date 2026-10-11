@@ -19,6 +19,7 @@ Dokumen ini menjelaskan bagaimana data berpindah antara HP dan Supabase, apa yan
    - File gambar diunggah ke Storage sebelum barisnya.
    - Setelah server menerima, tanda `pending` dihapus, tapi hanya kalau baris itu tidak diubah lagi selama pengiriman.
    - Baris yang ditolak server tetap `pending` dan mendapat `syncError`. Baris itu dicoba lagi tanpa menghalangi baris lain.
+   - Tabel yang ditambahkan setelah M5 (saat ini `cash_movements`, M3) baru dikirim setelah pull membuktikan server sudah punya tabelnya (`LATER_SERVER_TABLES`, daftar tabel server disimpan di `meta.serverTables`). Server lama melewati tabel yang tidak dikenalnya tanpa error, jadi tanpa pemeriksaan ini barisnya akan dianggap terkirim padahal tidak tersimpan.
 2. **Ambil (pull).**
    - Untuk setiap tabel, HP menyimpan kursor `{ts, id}` dari baris terakhir yang sudah diterima (urutan `synced_at, id`).
    - Pull berikutnya mulai **60 detik sebelum** kursor itu. Sebabnya: baris dari transaksi database yang lebih lama bisa terlihat setelah baris yang lebih baru. Baris yang terambil ulang aman karena diterapkan idempoten.
@@ -34,19 +35,20 @@ Dokumen ini menjelaskan bagaimana data berpindah antara HP dan Supabase, apa yan
 
 ## Aturan konflik
 
-Aturan ini berlaku di **dua tempat dengan isi yang sama**: trigger di database (`supabase/migrations/…_m5_akun_sinkron.sql`) dan `mergeRemote` di HP (`src/cloud/merge.ts`). Server tetap menegakkannya walaupun ada yang memanggil API langsung.
+Aturan ini berlaku di **dua tempat dengan isi yang sama**: trigger di database (`supabase/migrations/`) dan `mergeRemote` di HP (`src/cloud/merge.ts`). Server tetap menegakkannya walaupun ada yang memanggil API langsung.
 
 | Jenis data                                                                                       | Aturan                                                                                                                                                                                                                                                      |
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Data master**: toko, pengguna, perangkat, kategori, produk, grup varian, varian, shift, gambar | **Last write wins per baris**: versi dengan `updatedAt` terbaru yang dipakai. Versi yang lebih lama atau sama diabaikan server, dan server mengirim balik versinya supaya HP ikut menyesuaikan. Perubahan harga, HPP, dan pengaturan tercatat di log audit. |
 | **Transaksi**                                                                                    | Tidak pernah diedit. Hanya status yang boleh maju **sekali**: `paid → void` atau `paid → refunded`, beserta alasan, pelaku, dan waktunya. Void dari HP lain selalu diterima. Salinan lama berstatus `paid` tidak bisa membatalkan void.                     |
-| **Item transaksi, mutasi stok, log audit**                                                       | **Hanya bisa ditambah.** Mengirim ulang baris yang sudah ada tidak mengubah apa pun. Server menolak `UPDATE` dan `DELETE`.                                                                                                                                  |
+| **Item transaksi, mutasi stok, log audit, kas masuk/keluar**                                     | **Hanya bisa ditambah.** Mengirim ulang baris yang sudah ada tidak mengubah apa pun. Server menolak `UPDATE` dan `DELETE`.                                                                                                                                  |
 
 Akibat yang perlu diketahui:
 
 - **Stok tidak pernah bentrok.** Stok adalah jumlah `qtyDelta` dari semua mutasi, jadi penjualan bersamaan di dua HP sama-sama terhitung.
 - **Nomor struk tidak pernah bentrok.** Setiap HP punya kode sendiri (K1, K2, …) yang dibagikan server saat HP dipasang. Kode perangkat tidak bisa diubah.
 - **Edit bersamaan pada baris yang sama:** yang terakhir menang untuk seluruh baris. Contoh: HP A mengubah harga pukul 10.00 dan HP B mengubah nama produk yang sama pukul 10.05. Hasilnya, versi HP B dipakai, termasuk harga lamanya. Ini jarang terjadi karena data master hanya diubah pemilik.
+- **Shift (buka/tutup kasir)** adalah data master milik satu HP: dibuka dan ditutup di HP yang sama, jadi praktis tidak pernah bentrok. Saat tutup kasir, HP menyimpan angka "seharusnya di laci", uang fisik, dan selisihnya di baris shift. Laporan pemilik memakai angka yang tersimpan itu.
 - **Jam HP yang salah.** `updatedAt` berasal dari jam HP. Server memotong waktu yang lebih dari 5 menit di masa depan menjadi waktu server, supaya HP dengan jam terlalu maju tidak menang selamanya.
 
 ## Akun, perangkat, dan izin

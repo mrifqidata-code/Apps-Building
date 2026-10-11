@@ -1,5 +1,5 @@
 import type { CloudApi, PushResult, ServerCursor } from '../cloud/api';
-import { LOCAL_TABLE, tableKind, type ServerRow } from '../cloud/mapping';
+import { LOCAL_TABLE, SERVER_TABLE, tableKind, type ServerRow } from '../cloud/mapping';
 
 const after = (row: ServerRow, cursor: ServerCursor) => {
   const ts = Date.parse(String(row.synced_at)) - Date.parse(cursor.ts);
@@ -20,6 +20,11 @@ export class FakeCloud implements CloudApi {
   readonly files = new Map<string, Blob>();
   /** Row ids the server will refuse, as RLS or a constraint would. */
   readonly refuse = new Set<string>();
+  /**
+   * Tables the server has. Like the real push_changes, rows of other tables
+   * are skipped without an error (a server whose newest SQL file is not pasted yet).
+   */
+  readonly serverTables = new Set<string>(Object.values(SERVER_TABLE));
   pushCalls = 0;
   private clock = Date.UTC(2026, 9, 9);
 
@@ -42,6 +47,7 @@ export class FakeCloud implements CloudApi {
     this.pushCalls++;
     const result: PushResult = { failed: [], current: [] };
     for (const [name, rows] of Object.entries(changes)) {
+      if (!this.serverTables.has(name)) continue;
       const table = this.table(name);
       const kind = tableKind(LOCAL_TABLE[name]!);
       for (const row of rows) {
@@ -85,9 +91,9 @@ export class FakeCloud implements CloudApi {
     limit: number,
   ): Promise<Record<string, ServerRow[]>> {
     const out: Record<string, ServerRow[]> = {};
-    for (const [name, table] of this.tables) {
+    for (const name of this.serverTables) {
       const cursor = cursors[name];
-      out[name] = [...table.values()]
+      out[name] = [...this.table(name).values()]
         .filter((row) => !cursor || after(row, cursor))
         .sort(order)
         .slice(0, limit);

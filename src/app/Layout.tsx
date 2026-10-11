@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { syncLabel, syncTone } from '../cloud/status-text';
 import { useSyncStatus } from '../cloud/sync-manager';
 import { signOut } from '../db/auth';
@@ -13,12 +14,23 @@ export function Layout() {
   const sync = useSyncStatus();
   const navigate = useNavigate();
   const tone = syncTone(sync, online);
+  const { pathname } = useLocation();
+  const nav = useRef<HTMLElement>(null);
+
+  // The owner's menu is wider than a phone: keep the current page's tab in view.
+  useEffect(() => {
+    nav.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [pathname]);
 
   const links = [
     { to: '/', label: 'Kasir', end: true },
     { to: '/riwayat', label: 'Riwayat' },
+    { to: '/kas', label: 'Kas' },
     ...(isOwner
       ? [
+          { to: '/laporan', label: 'Laporan' },
           { to: '/produk', label: 'Produk' },
           { to: '/pengaturan', label: 'Pengaturan' },
         ]
@@ -60,7 +72,7 @@ export function Layout() {
         </div>
         {user && (
           <div className="flex items-center overflow-x-auto px-2">
-            <nav aria-label="Menu utama" className="flex flex-1 gap-1">
+            <nav ref={nav} aria-label="Menu utama" className="flex flex-1 gap-1">
               {links.map((link) => (
                 <NavLink
                   key={link.to}

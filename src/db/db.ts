@@ -1,6 +1,7 @@
 import { Dexie, type EntityTable } from 'dexie';
 import type {
   AuditLogEntry,
+  CashMovement,
   Category,
   Counter,
   Customer,
@@ -28,6 +29,7 @@ export class PosDatabase extends Dexie {
   productVariants!: EntityTable<ProductVariant, 'id'>;
   customers!: EntityTable<Customer, 'id'>;
   shifts!: EntityTable<Shift, 'id'>;
+  cashMovements!: EntityTable<CashMovement, 'id'>;
   transactions!: EntityTable<Transaction, 'id'>;
   transactionItems!: EntityTable<TransactionItem, 'id'>;
   stockMovements!: EntityTable<StockMovement, 'id'>;
@@ -81,7 +83,8 @@ export class PosDatabase extends Dexie {
       })
       .upgrade(async (tx) => {
         // Nothing was ever synced before v2, so every existing row still has to be sent.
-        for (const table of SYNCED_TABLE_NAMES) {
+        // (The tables as they were in v2; later tables do not exist yet during this upgrade.)
+        for (const table of SYNCED_TABLE_NAMES.slice(0, V2_SYNCED_TABLE_COUNT)) {
           await tx
             .table(table)
             .toCollection()
@@ -90,6 +93,11 @@ export class PosDatabase extends Dexie {
             });
         }
       });
+
+    // v3 (M3): kas masuk/keluar during a shift.
+    this.version(3).stores({
+      cashMovements: 'id, storeId, shiftId, createdAt, pending',
+    });
   }
 }
 
@@ -109,7 +117,12 @@ export const SYNCED_TABLE_NAMES = [
   'transactionItems',
   'stockMovements',
   'auditLog',
+  // Added in v3 (M3). New tables go at the end.
+  'cashMovements',
 ] as const;
+
+/** SYNCED_TABLE_NAMES had 14 tables in Dexie v2. */
+const V2_SYNCED_TABLE_COUNT = 14;
 
 export type SyncedTableName = (typeof SYNCED_TABLE_NAMES)[number];
 

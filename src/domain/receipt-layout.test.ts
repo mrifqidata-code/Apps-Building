@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   RECEIPT_WIDTH,
+  buildShiftRecapLines,
   buildReceiptLines,
   buildTestPageLines,
   columns,
@@ -8,6 +9,7 @@ import {
   wrap,
 } from './receipt-layout';
 import type { ReceiptView } from './receipt-text';
+import { summarizeShift } from './shift';
 
 const receipt: ReceiptView = {
   storeName: 'Kedai Kopi Senja',
@@ -140,5 +142,42 @@ describe('buildTestPageLines', () => {
     const lines = buildTestPageLines('Kedai Kopi Senja', '2026-10-09T00:04:00.000Z');
     expect(lines.map((l) => l.text)).toContain('12345678901234567890123456789012');
     for (const line of lines) expect(line.text.length).toBeLessThanOrEqual(RECEIPT_WIDTH);
+  });
+});
+
+describe('buildShiftRecapLines', () => {
+  it('prints the tutup kasir recap within 32 columns', () => {
+    const lines = buildShiftRecapLines({
+      storeName: 'Kedai Kopi Senja',
+      deviceLabel: 'K1 · HP Kasir',
+      openedAt: '2026-10-10T00:00:00.000Z',
+      openedByName: 'Sari',
+      closedAt: '2026-10-10T10:05:00.000Z',
+      closedByName: 'Sari',
+      summary: summarizeShift(
+        200_000,
+        [
+          { status: 'paid', paymentMethod: 'cash', total: 75_000 },
+          { status: 'paid', paymentMethod: 'qris', total: 25_000 },
+        ],
+        [{ type: 'out', amount: 20_000 }],
+      ),
+      countedCash: 250_000,
+      cashDifference: -5_000,
+      movements: [{ type: 'out', amount: 20_000, reason: 'Beli es batu untuk stok sore hari' }],
+      note: null,
+    });
+    const text = lines.map((l) => l.text);
+    expect(text.every((t) => t.length <= RECEIPT_WIDTH)).toBe(true);
+    expect(text).toContain('TUTUP KASIR');
+    expect(text).toContain('K1 - HP Kasir');
+    expect(text).toContain('Seharusnya di laci     Rp255.000');
+    expect(text).toContain('Selisih           Kurang Rp5.000');
+    expect(text).toContain('  QRIS (1)              Rp25.000');
+    expect(text).toContain('Kas keluar             -Rp20.000');
+    expect(lines.find((l) => l.text.startsWith('Selisih'))).toMatchObject({
+      bold: true,
+      tall: true,
+    });
   });
 });

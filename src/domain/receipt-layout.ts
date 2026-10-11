@@ -1,11 +1,19 @@
 import { formatRupiah } from './money';
 import {
+  PAYMENT_LABELS,
   STATUS_BANNER,
   formatSummaryAmount,
   receiptItemName,
   receiptSummaryRows,
   type ReceiptView,
 } from './receipt-text';
+import { PAYMENT_METHODS } from './report';
+import {
+  CASH_MOVEMENT_LABELS,
+  formatCashDifference,
+  shiftCashRows,
+  type ShiftRecapView,
+} from './shift';
 import { formatJakartaDateTime, type IsoDateTime } from './time';
 
 /**
@@ -35,12 +43,13 @@ const REPLACEMENTS: Record<string, string> = {
   '…': '...',
   '×': 'x',
   '•': '*',
+  '·': '-',
 };
 
 /** "Caffè Latte – Large" -> "Caffe Latte - Large"; anything else non-ASCII becomes "?". */
 export function toPrintable(text: string): string {
   return text
-    .replace(/[–—‘’“”…×•]/g, (c) => REPLACEMENTS[c] ?? c)
+    .replace(/[–—‘’“”…×•·]/g, (c) => REPLACEMENTS[c] ?? c)
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[\r\n\t]+/g, ' ')
@@ -161,4 +170,53 @@ export function buildTestPageLines(
     separator(width),
     { text: `Lebar kertas: ${width} karakter`, align: 'center' },
   ];
+}
+
+/** Tutup kasir recap, to keep with the cash (same content as the WhatsApp text). */
+export function buildShiftRecapLines(v: ShiftRecapView, width = RECEIPT_WIDTH): PrintLine[] {
+  const out: PrintLine[] = [];
+  const plain = (lines: string[], extra: Omit<PrintLine, 'text'> = {}) =>
+    lines.forEach((text) => out.push({ text, ...extra }));
+  const money = (amount: number, negative = false) =>
+    `${negative ? '-' : ''}${formatRupiah(amount)}`;
+
+  plain(wrap(v.storeName, width), { align: 'center', bold: true });
+  plain(['TUTUP KASIR'], { align: 'center', bold: true, tall: true });
+  plain(wrap(v.deviceLabel, width), { align: 'center' });
+  out.push(separator(width));
+  plain(wrap(`Buka : ${formatJakartaDateTime(v.openedAt)} ${v.openedByName}`, width));
+  plain(wrap(`Tutup: ${formatJakartaDateTime(v.closedAt)} ${v.closedByName}`, width));
+  out.push(separator(width));
+
+  for (const row of shiftCashRows(v)) {
+    plain(columns(row.label, money(row.amount, row.negative), width), {
+      bold: row.kind === 'total',
+    });
+  }
+  plain(columns('Selisih', formatCashDifference(v.cashDifference), width), {
+    bold: true,
+    tall: true,
+  });
+  out.push(separator(width));
+
+  plain(columns('Penjualan', `${v.summary.transactions} transaksi`, width));
+  for (const method of PAYMENT_METHODS) {
+    const row = v.summary.salesByMethod[method];
+    plain(columns(`  ${PAYMENT_LABELS[method]} (${row.transactions})`, money(row.total), width));
+  }
+  plain(columns('Total penjualan', money(v.summary.totalSales), width), { bold: true });
+  if (v.summary.cancelled) plain(wrap(`Dibatalkan: ${v.summary.cancelled} transaksi`, width));
+
+  if (v.movements.length) {
+    out.push(separator(width));
+    for (const m of v.movements) {
+      plain(columns(CASH_MOVEMENT_LABELS[m.type], money(m.amount, m.type === 'out'), width));
+      plain(wrap(`  ${m.reason}`, width));
+    }
+  }
+  if (v.note) {
+    out.push(separator(width));
+    plain(wrap(`Catatan: ${v.note}`, width));
+  }
+  return out;
 }

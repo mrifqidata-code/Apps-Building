@@ -12,6 +12,7 @@ import {
 import type { PosDatabase } from './db';
 import { allocateReceiptNumber } from './receipt';
 import { newRow } from './rows';
+import { getOpenShift } from './shift';
 import type {
   PaymentMethod,
   Product,
@@ -61,7 +62,8 @@ export interface SaleInput {
  * Saves a sale entirely on the device, in one IndexedDB transaction:
  * receipt number, transaction, items (with price snapshots) and stock
  * movements for products that track stock. Either all of it is stored or
- * none of it is. Returns the new transaction.
+ * none of it is. The sale belongs to the device's open shift; without one
+ * (kasir belum dibuka) nothing is saved. Returns the new transaction.
  */
 export async function completeSale(database: PosDatabase, input: SaleInput): Promise<Transaction> {
   if (input.cart.lines.length === 0) throw new CartError('Keranjang masih kosong.');
@@ -72,6 +74,7 @@ export async function completeSale(database: PosDatabase, input: SaleInput): Pro
     [
       database.stores,
       database.devices,
+      database.shifts,
       database.products,
       database.productVariants,
       database.variantGroups,
@@ -85,6 +88,8 @@ export async function completeSale(database: PosDatabase, input: SaleInput): Pro
       const device = await database.devices.get(input.deviceId);
       if (!store) throw new CartError('Data toko tidak ditemukan.');
       if (!device || device.storeId !== store.id) throw new CartError('Perangkat belum terdaftar.');
+      const shift = await getOpenShift(database, device.id);
+      if (!shift) throw new CartError('Kasir belum dibuka. Buka kasir dulu di layar Kasir.');
 
       const productIds = [...new Set(input.cart.lines.map((l) => l.productId))];
       const [products, variants, groups] = await Promise.all([
@@ -116,7 +121,7 @@ export async function completeSale(database: PosDatabase, input: SaleInput): Pro
         ...newRow(store.id, input.now),
         receiptNo,
         deviceId: device.id,
-        shiftId: null,
+        shiftId: shift.id,
         cashierId: input.cashier.id,
         customerId: null,
         subtotal: totals.subtotal,

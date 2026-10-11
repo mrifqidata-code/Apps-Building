@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allocateProportionally,
   assertRupiah,
   divRound,
   formatBps,
@@ -7,6 +8,7 @@ import {
   parseRupiah,
   percentOf,
   percentToBps,
+  ratioBps,
 } from './money';
 
 describe('formatRupiah', () => {
@@ -87,5 +89,52 @@ describe('percent helpers', () => {
   it('formats basis points the Indonesian way', () => {
     expect(formatBps(1_000)).toBe('10%');
     expect(formatBps(1_250)).toBe('12,5%');
+  });
+});
+
+describe('allocateProportionally', () => {
+  it('splits in proportion and always adds up to the total', () => {
+    expect(allocateProportionally(10_000, [1, 1])).toEqual([5_000, 5_000]);
+    expect(allocateProportionally(100, [1, 1, 1])).toEqual([34, 33, 33]);
+    expect(allocateProportionally(9_000, [20_000, 10_000])).toEqual([6_000, 3_000]);
+  });
+
+  it('gives leftover rupiah to the largest remainders, ties to the earlier part', () => {
+    // 11 over 3:3:4 is 3.3, 3.3, 4.4: floors 3, 3, 4, and the leftover goes to the .4.
+    expect(allocateProportionally(11, [3, 3, 4])).toEqual([3, 3, 5]);
+    expect(allocateProportionally(2, [1, 1, 1])).toEqual([1, 1, 0]);
+  });
+
+  it('handles zero totals and zero weights', () => {
+    expect(allocateProportionally(0, [5, 7])).toEqual([0, 0]);
+    expect(allocateProportionally(0, [])).toEqual([]);
+    expect(allocateProportionally(500, [0, 0])).toEqual([500, 0]);
+    expect(allocateProportionally(500, [0, 3])).toEqual([0, 500]);
+  });
+
+  it('stays exact with large amounts', () => {
+    const parts = allocateProportionally(999_999_999_999, [333_333_333_333, 666_666_666_667]);
+    expect(parts[0]! + parts[1]!).toBe(999_999_999_999);
+  });
+
+  it('rejects negative or fractional input', () => {
+    expect(() => allocateProportionally(-1, [1])).toThrow(RangeError);
+    expect(() => allocateProportionally(10, [1.5])).toThrow(RangeError);
+    expect(() => allocateProportionally(10, [-1, 2])).toThrow(RangeError);
+    expect(() => allocateProportionally(10, [])).toThrow(RangeError);
+  });
+});
+
+describe('ratioBps', () => {
+  it('returns basis points rounded half away from zero', () => {
+    expect(ratioBps(1, 3)).toBe(3_333);
+    expect(ratioBps(2, 3)).toBe(6_667);
+    expect(ratioBps(-1, 8)).toBe(-1_250);
+    expect(ratioBps(5_000, 10_000)).toBe(5_000);
+  });
+
+  it('is null without a positive whole', () => {
+    expect(ratioBps(5, 0)).toBeNull();
+    expect(ratioBps(5, -10)).toBeNull();
   });
 });

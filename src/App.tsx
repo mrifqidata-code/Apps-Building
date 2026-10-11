@@ -10,8 +10,12 @@ import { NewPasswordPage } from './features/akun/NewPasswordPage';
 import { PairPage } from './features/akun/PairPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { PaymentPage } from './features/bayar/PaymentPage';
+import { CloseShiftPage } from './features/kas/CloseShiftPage';
+import { ShiftPage } from './features/kas/ShiftPage';
+import { ShiftRecapPage } from './features/kas/ShiftRecapPage';
 import { CartProvider } from './features/kasir/CartProvider';
 import { KasirPage } from './features/kasir/KasirPage';
+import { ReportPage } from './features/laporan/ReportPage';
 import { SettingsPage } from './features/pengaturan/SettingsPage';
 import { ProductEditPage } from './features/produk/ProductEditPage';
 import { ProductListPage } from './features/produk/ProductListPage';
@@ -82,6 +86,40 @@ export function App() {
                 element={
                   <RequireUser>
                     <HistoryPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/kas"
+                element={
+                  <RequireUser>
+                    <ShiftPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/kas/tutup"
+                element={
+                  <RequireUser>
+                    <CloseShiftPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/kas/:id"
+                element={
+                  <RequireUser>
+                    <ShiftRecapPage />
+                  </RequireUser>
+                }
+              />
+              <Route
+                path="/laporan"
+                element={
+                  <RequireUser>
+                    <RequireOwner>
+                      <ReportPage />
+                    </RequireOwner>
                   </RequireUser>
                 }
               />

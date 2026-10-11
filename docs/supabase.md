@@ -29,7 +29,19 @@ Waktu yang dibutuhkan: sekitar 20 menit, cukup sekali.
 
 Kalau tidak sengaja menjalankan dua kali, akan muncul error "already exists". Itu aman: tidak ada yang berubah.
 
-Setiap milestone yang mengubah database akan membawa file SQL baru di folder yang sama. Jalankan file baru itu sekali dengan cara yang sama, berurutan sesuai nama file.
+Setelah itu, lanjutkan dengan file SQL milestone berikutnya di bagian **Memperbarui database** di bawah.
+
+### Memperbarui database
+
+Setiap milestone yang mengubah database membawa file SQL baru di folder `supabase/migrations/`. Jalankan setiap file baru **sekali**, berurutan sesuai nama file, dengan cara yang sama seperti langkah B.1–B.4.
+
+| File                                                                                              | Milestone | Isi                                  |
+| ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------ |
+| [`20261009120000_m5_akun_sinkron.sql`](../supabase/migrations/20261009120000_m5_akun_sinkron.sql) | M5        | Akun, perangkat, sinkron (langkah B) |
+| [`20261010120000_m3_kas.sql`](../supabase/migrations/20261010120000_m3_kas.sql)                   | M3        | Kas masuk/keluar saat shift          |
+
+- Jalankan file baru **sebelum** versi aplikasinya di-merge, supaya HP langsung bisa mengirim data baru. File M3 aman dijalankan lebih dari sekali.
+- Kalau terlambat, tidak ada data yang hilang. Catatan kas masuk/keluar tetap tersimpan di HP dan ditahan sampai database diperbarui. Selama itu, **Pengaturan → Akun & sinkron** menampilkan pesan "Database cloud belum diperbarui".
 
 ## C. Mengaktifkan login
 
