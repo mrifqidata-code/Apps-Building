@@ -88,6 +88,14 @@ export function LoginPage() {
           </Link>
         </nav>
       )}
+      {!selected && (
+        <Link
+          to="/bantuan"
+          className="mx-auto flex min-h-12 items-center px-4 text-sm font-semibold text-brand-800 underline"
+        >
+          Panduan pemakaian
+        </Link>
+      )}
     </main>
   );
 }

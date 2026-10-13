@@ -8,6 +8,7 @@ import { bootstrap } from './db/bootstrap';
 import { AccountPage } from './features/akun/AccountPage';
 import { NewPasswordPage } from './features/akun/NewPasswordPage';
 import { PairPage } from './features/akun/PairPage';
+import { HelpPage } from './features/bantuan/HelpPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { PaymentPage } from './features/bayar/PaymentPage';
 import { CloseShiftPage } from './features/kas/CloseShiftPage';
@@ -59,6 +60,7 @@ export function App() {
               <Route path="/akun" element={<AccountPage />} />
               <Route path="/akun/password-baru" element={<NewPasswordPage />} />
               <Route path="/pasang" element={<PairPage />} />
+              <Route path="/bantuan" element={<HelpPage />} />
               <Route
                 path="/"
                 element={

@@ -12,15 +12,15 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 
 ## Status milestone
 
-| Milestone | Isi                                                   | Status       |
-| --------- | ----------------------------------------------------- | ------------ |
-| M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai   |
-| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai   |
-| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ Selesai   |
-| M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ Selesai   |
-| M3        | Kas, shift, laporan, ekspor CSV                       | ✅ Selesai   |
-| M4        | Stok                                                  | ✅ PR ini    |
-| M6        | Pengerasan: void/refund, log audit, panduan pemakaian | Direncanakan |
+| Milestone | Isi                                                   | Status     |
+| --------- | ----------------------------------------------------- | ---------- |
+| M0        | Fondasi: proyek, PWA, CI, skema data, data demo       | ✅ Selesai |
+| M1        | Layar kasir offline: produk, keranjang, bayar, struk  | ✅ Selesai |
+| M2        | Cetak struk Bluetooth, PDF, WhatsApp, pengaturan toko | ✅ Selesai |
+| M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ Selesai |
+| M3        | Kas, shift, laporan, ekspor CSV                       | ✅ Selesai |
+| M4        | Stok                                                  | ✅ Selesai |
+| M6        | Pengerasan: void/refund, log audit, panduan pemakaian | ✅ PR ini  |
 
 M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di atas data dari semua perangkat.
 
@@ -50,6 +50,12 @@ M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di a
    - Kasir mencatat barang datang lewat **Stok → + Stok masuk**.
    - Pemilik menghitung ulang lewat **Opname**. Selisihnya tercatat di riwayat dan log audit.
    - Halaman produk memperingatkan **margin tipis** kalau HPP sudah lebih dari 80% harga jual.
+
+10. **Membatalkan transaksi:** buka struk lewat **Riwayat**, lalu ketuk **Batalkan transaksi**.
+    - Hanya pemilik yang bisa, wajib dengan alasan, dan tercatat di log audit. Di HP kasir, pemilik cukup mengetik PIN-nya.
+    - Selama kasirnya masih buka, pembatalan berupa **void**. Setelah kasir ditutup, berupa **refund**: uang tunai diambil dari laci yang sedang buka.
+
+Panduan lengkap untuk pemilik dan kasir ada di menu **Bantuan**, yang juga bisa dibuka tanpa internet, dan di [docs/panduan.md](docs/panduan.md).
 
 Semua langkah di atas tetap jalan tanpa internet. Data tersimpan di perangkat.
 

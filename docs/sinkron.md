@@ -51,6 +51,7 @@ Akibat yang perlu diketahui:
   - Contoh: HP kasir offline menjual 2 pukul 10.00, lalu pemilik menghitung rak pukul 11.00 sebelum penjualan itu tersinkron. Penjualan itu tidak dikurangi lagi, karena 2 barang itu sudah tidak ada di rak saat dihitung.
 - **Nomor struk tidak pernah bentrok.** Setiap HP punya kode sendiri (K1, K2, …) yang dibagikan server saat HP dipasang. Kode perangkat tidak bisa diubah.
 - **Edit bersamaan pada baris yang sama:** yang terakhir menang untuk seluruh baris. Contoh: HP A mengubah harga pukul 10.00 dan HP B mengubah nama produk yang sama pukul 10.05. Hasilnya, versi HP B dipakai, termasuk harga lamanya. Ini jarang terjadi karena data master hanya diubah pemilik.
+- **Void dan refund** mengubah satu transaksi (status maju sekali) dan menambah baris lain yang hanya bisa ditambah: mutasi stok `void_return`, kas keluar untuk refund tunai, dan log audit. Semuanya tersinkron seperti biasa. Server menolak status mundur, tapi tidak bisa memeriksa PIN pemilik. Aturan "hanya pemilik" ditegakkan di aplikasi dan terlihat di log audit.
 - **Shift (buka/tutup kasir)** adalah data master milik satu HP: dibuka dan ditutup di HP yang sama, jadi praktis tidak pernah bentrok. Saat tutup kasir, HP menyimpan angka "seharusnya di laci", uang fisik, dan selisihnya di baris shift. Laporan pemilik memakai angka yang tersimpan itu.
 - **Jam HP yang salah.** `updatedAt` berasal dari jam HP. Server memotong waktu yang lebih dari 5 menit di masa depan menjadi waktu server, supaya HP dengan jam terlalu maju tidak menang selamanya.
 

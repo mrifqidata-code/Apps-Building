@@ -39,6 +39,7 @@ export function Layout() {
           { to: '/pengaturan', label: 'Pengaturan' },
         ]
       : []),
+    { to: '/bantuan', label: 'Bantuan' },
   ];
 
   return (

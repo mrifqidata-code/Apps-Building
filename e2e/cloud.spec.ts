@@ -80,7 +80,21 @@ test('pemilik daftar, memasang HP kasir dengan kode, dan penjualan tersinkron', 
   await expect(owner.getByRole('link', { name: offlineReceipt })).toHaveCount(1);
   await expect(owner.getByRole('link', { name: /^K2-/ })).toHaveCount(2);
 
-  // 6. The owner disconnects the cashier phone; it stops syncing.
+  // 6. The owner voids the offline sale on their phone; the cashier phone hears of it.
+  await owner.getByRole('link', { name: offlineReceipt }).click();
+  await owner.getByRole('button', { name: 'Batalkan transaksi' }).click();
+  const voidSheet = owner.getByRole('dialog', { name: 'Void transaksi' });
+  await voidSheet.getByRole('button', { name: 'Salah input' }).click();
+  await voidSheet.getByRole('button', { name: 'Ya, void transaksi' }).click();
+  await expect(owner.getByRole('region', { name: 'Pembatalan' })).toContainText('di-void');
+  await expect(syncChip(owner)).toHaveText('Tersinkron', { timeout: 40_000 });
+  await cashier.getByRole('link', { name: 'Riwayat' }).click();
+  await expect(cashier.getByRole('link', { name: new RegExp(offlineReceipt) })).toContainText(
+    'Dibatalkan',
+    { timeout: 40_000 },
+  );
+
+  // 7. The owner disconnects the cashier phone; it stops syncing.
   await openSettings(owner);
   const devices = owner.getByRole('list', { name: 'Daftar perangkat' });
   await devices
