@@ -2,22 +2,30 @@ import { useMemo } from 'react';
 import { Link } from 'react-router';
 import guideMarkdown from '../../../docs/panduan.md?raw';
 import { useSession } from '../../app/session-context';
-import { parseGuide, type GuideBlock, type TextRun } from '../../domain/guide-markdown';
+import { parseGuide } from '../../domain/guide-markdown';
+import { SupportLink } from '../../ui/SupportLink';
+import { GuideBlocks } from './GuideBlocks';
+
+/** Opened from the sign-in screen there is no menu, so offer the way back. */
+export function BackToSignIn() {
+  const { user } = useSession();
+  if (user) return null;
+  return (
+    <Link to="/masuk" className="flex min-h-12 items-center font-semibold text-brand-800">
+      ← Kembali ke layar masuk
+    </Link>
+  );
+}
 
 /** The guide from docs/panduan.md, bundled into the app so it opens offline. */
 export function HelpPage() {
-  const { user } = useSession();
+  const { store } = useSession();
   const guide = useMemo(() => parseGuide(guideMarkdown), []);
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4">
-      {/* Opened from the sign-in screen there is no menu, so offer the way back. */}
-      {!user && (
-        <Link to="/masuk" className="flex min-h-12 items-center font-semibold text-brand-800">
-          ← Kembali ke layar masuk
-        </Link>
-      )}
+      <BackToSignIn />
       <h1 className="text-xl font-bold">Bantuan</h1>
-      <Blocks blocks={guide.intro} />
+      <GuideBlocks blocks={guide.intro} />
       <div className="flex flex-col gap-2">
         {guide.sections.map((section) => (
           <details
@@ -34,57 +42,25 @@ export function HelpPage() {
               </span>
             </summary>
             <div className="flex flex-col gap-3 px-4 pb-4 text-slate-700">
-              <Blocks blocks={section.blocks} />
+              <GuideBlocks blocks={section.blocks} />
             </div>
           </details>
         ))}
       </div>
+      <section aria-label="Hubungi kami" className="flex flex-col gap-3 pt-2">
+        <SupportLink
+          message={`Halo, saya butuh bantuan memakai Reqap (toko ${store.name}).`}
+          label="Hubungi kami lewat WhatsApp"
+        />
+        <nav aria-label="Dokumen" className="flex flex-wrap justify-center gap-x-4 text-sm">
+          <Link to="/syarat" className="flex min-h-12 items-center text-brand-800 underline">
+            Syarat Layanan
+          </Link>
+          <Link to="/privasi" className="flex min-h-12 items-center text-brand-800 underline">
+            Kebijakan Privasi
+          </Link>
+        </nav>
+      </section>
     </main>
   );
-}
-
-function Runs({ runs }: { runs: TextRun[] }) {
-  return runs.map((run, i) =>
-    run.bold ? (
-      <strong key={i} className="font-semibold text-slate-900">
-        {run.text}
-      </strong>
-    ) : (
-      <span key={i}>{run.text}</span>
-    ),
-  );
-}
-
-function Blocks({ blocks }: { blocks: GuideBlock[] }) {
-  return blocks.map((block, i) => {
-    if (block.kind === 'paragraph') {
-      return (
-        <p key={i}>
-          <Runs runs={block.text} />
-        </p>
-      );
-    }
-    const List = block.ordered ? 'ol' : 'ul';
-    return (
-      <List
-        key={i}
-        className={`flex flex-col gap-2 pl-6 ${block.ordered ? 'list-decimal' : 'list-disc'}`}
-      >
-        {block.items.map((item, j) => (
-          <li key={j}>
-            <Runs runs={item.text} />
-            {item.children.length > 0 && (
-              <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
-                {item.children.map((child, k) => (
-                  <li key={k}>
-                    <Runs runs={child} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </List>
-    );
-  });
 }

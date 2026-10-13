@@ -10,6 +10,7 @@ import { CloudError } from './api';
 import { cloudErrorMessage } from './account';
 import { getCloudClient } from './client';
 import { getCloudLink, type CloudRole } from './link';
+import { fetchStorePlan, saveCachedPlan } from './plan';
 import { SupabaseCloudApi } from './supabase-api';
 import { META_LAST_SYNC, SyncEngine } from './sync-engine';
 
@@ -19,9 +20,11 @@ import { META_LAST_SYNC, SyncEngine } from './sync-engine';
  * - offline: no internet; changes wait on the device.
  * - signed-out: the account session on this device is gone.
  * - revoked: the owner disconnected this device.
+ * - plan-inactive: the store's plan ran out; changes wait on the device until it is extended.
  * - error: the last attempt failed; it is retried automatically.
  */
-export type SyncPhase = 'off' | 'idle' | 'syncing' | 'offline' | 'signed-out' | 'revoked' | 'error';
+export type SyncPhase =
+  'off' | 'idle' | 'syncing' | 'offline' | 'signed-out' | 'revoked' | 'plan-inactive' | 'error';
 
 export interface SyncStatus {
   phase: SyncPhase;
@@ -50,6 +53,8 @@ const INTERVAL_MS = 30_000;
 const SOON_MS = 1_500;
 /** How often a device refreshes its own "last seen" time for the owner's device list. */
 const LAST_SEEN_EVERY_MS = 15 * 60_000;
+/** How often the store's plan is read again (and a lapsed store retries on its own). */
+const PLAN_EVERY_MS = 10 * 60_000;
 
 async function countPending(database: PosDatabase) {
   let pending = 0;
@@ -74,6 +79,9 @@ export class SyncManager {
   private running: Promise<void> | null = null;
   private runAgain = false;
   private stopAuthListener: (() => void) | null = null;
+  private storeId: string | null = null;
+  private lastAttemptAt = 0;
+  private planCheckedAt = 0;
 
   constructor(private readonly database: PosDatabase) {}
 
@@ -101,6 +109,8 @@ export class SyncManager {
     }
     const client = await clientPromise;
     this.client = client;
+    this.storeId = link.storeId;
+    this.planCheckedAt = 0;
     this.engine = new SyncEngine(this.database, new SupabaseCloudApi(client), link.storeId);
     const lastSyncAt =
       ((await this.database.meta.get(META_LAST_SYNC))?.value as string | undefined) ?? null;
@@ -112,7 +122,7 @@ export class SyncManager {
         if (pending > failed) this.requestSoon();
       },
     });
-    this.interval = setInterval(() => void this.syncNow(), INTERVAL_MS);
+    this.interval = setInterval(() => this.syncIfDue(), INTERVAL_MS);
     window.addEventListener('online', this.onWake);
     document.addEventListener('visibilitychange', this.onWake);
     const { data } = client.auth.onAuthStateChange((event) => {
@@ -138,15 +148,23 @@ export class SyncManager {
   }
 
   private onWake = () => {
-    if (document.visibilityState === 'visible') void this.syncNow();
+    if (document.visibilityState === 'visible') this.syncIfDue();
   };
 
   private requestSoon() {
     if (this.soon) return;
     this.soon = setTimeout(() => {
       this.soon = null;
-      void this.syncNow();
+      this.syncIfDue();
     }, SOON_MS);
+  }
+
+  /** Automatic runs. A store whose plan ran out only retries every 10 minutes. */
+  private syncIfDue() {
+    if (this.status.phase === 'plan-inactive' && Date.now() - this.lastAttemptAt < PLAN_EVERY_MS) {
+      return;
+    }
+    void this.syncNow();
   }
 
   /** Runs one sync now, or right after the one in progress. */
@@ -173,6 +191,8 @@ export class SyncManager {
     const { data } = await client.auth.getSession();
     if (!data.session) return this.set({ phase: 'signed-out', message: null });
 
+    const before = this.status.phase;
+    this.lastAttemptAt = Date.now();
     this.set({ phase: 'syncing' });
     try {
       await this.refreshLastSeen();
@@ -192,9 +212,29 @@ export class SyncManager {
             ? 'signed-out'
             : kind === 'offline'
               ? 'offline'
-              : 'error';
+              : kind === 'plan-inactive'
+                ? 'plan-inactive'
+                : 'error';
       this.set({ phase, message: cloudErrorMessage(e) });
       if (phase === 'revoked') this.stop();
+    }
+    const after = this.status.phase;
+    const changed = (before === 'plan-inactive') !== (after === 'plan-inactive');
+    if (after === 'idle' || after === 'plan-inactive') await this.refreshPlan(changed);
+  }
+
+  /** Reads the store's plan for the settings screen and the owner's reminder. */
+  private async refreshPlan(force: boolean) {
+    const client = this.client;
+    const storeId = this.storeId;
+    if (!client || !storeId) return;
+    if (!force && Date.now() - this.planCheckedAt < PLAN_EVERY_MS) return;
+    try {
+      const plan = await fetchStorePlan(client, storeId);
+      this.planCheckedAt = Date.now();
+      await saveCachedPlan(this.database, plan, nowIso());
+    } catch {
+      // Offline, or a server without the M7 SQL: keep what is cached.
     }
   }
 

@@ -93,10 +93,13 @@ Hanya pemilik yang bisa membuka **Laporan**.
 2. Di HP kasir: buka aplikasi, ketuk **Pasang HP kasir dengan kode**, lalu ketik kodenya.
 3. Penjualan dari semua HP terkumpul sendiri saat ada internet, termasuk yang dibuat saat offline.
 
+Fitur cloud (akun, sinkron, cadangan, dan HP kasir tambahan) gratis dicoba 30 hari, lalu memakai **Paket Toko**. Masa aktifnya terlihat di **Pengaturan → Akun & sinkron → Paket**, dan diperpanjang lewat tombol **Perpanjang lewat WhatsApp**.
+
 ## Kalau ada masalah
 
 - **Status Offline:** tidak ada internet. Jualan tetap jalan, dan datanya terkirim sendiri saat online lagi.
 - **Status Belum terkirim:** ada data yang menunggu dikirim. Biarkan aplikasi terbuka sebentar saat ada internet.
+- **Status Masa aktif habis:** paket toko sudah berakhir. Jualan tetap jalan dan data aman di HP. Setelah pemilik memperpanjang paket, data terkirim sendiri.
 - **Muncul Versi baru tersedia:** selesaikan transaksi yang sedang berjalan, lalu ketuk **Muat ulang**.
 - **PIN terkunci:** tunggu sebentar setelah 5 kali salah, lalu coba lagi.
 - **Printer tidak mencetak:** tekan tombol daya printer, dekatkan ke HP, lalu ketuk **Cetak struk** lagi.

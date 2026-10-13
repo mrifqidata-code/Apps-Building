@@ -39,8 +39,10 @@ Setiap milestone yang mengubah database membawa file SQL baru di folder `supabas
 | ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------ |
 | [`20261009120000_m5_akun_sinkron.sql`](../supabase/migrations/20261009120000_m5_akun_sinkron.sql) | M5        | Akun, perangkat, sinkron (langkah B) |
 | [`20261010120000_m3_kas.sql`](../supabase/migrations/20261010120000_m3_kas.sql)                   | M3        | Kas masuk/keluar saat shift          |
+| [`20261013120000_m7_paket.sql`](../supabase/migrations/20261013120000_m7_paket.sql)               | M7        | Paket toko dan masa aktif            |
 
-- Jalankan file baru **sebelum** versi aplikasinya di-merge, supaya HP langsung bisa mengirim data baru. File M3 aman dijalankan lebih dari sekali.
+- Jalankan file baru **sebelum** versi aplikasinya di-merge, supaya HP langsung bisa mengirim data baru. File M3 dan M7 aman dijalankan lebih dari sekali.
+- File M7 memberi setiap toko yang sudah ada uji coba 30 hari sejak file dipasang. Cara memperpanjang atau membuat toko Anda tanpa batas waktu ada di [docs/paket.md](paket.md).
 - Kalau terlambat, tidak ada data yang hilang. Catatan kas masuk/keluar tetap tersimpan di HP dan ditahan sampai database diperbarui. Selama itu, **Pengaturan → Akun & sinkron** menampilkan pesan "Database cloud belum diperbarui".
 
 ## C. Mengaktifkan login
@@ -71,6 +73,8 @@ Alamat ini dipakai tautan di email konfirmasi dan email "lupa password".
    Jangan pakai kotak **Runtime variables and secrets**. Kotak itu menampilkan "Variables cannot be added to a Worker that only has static assets", karena aplikasi ini tidak punya kode server. Variabel Supabase dibaca saat aplikasi dibangun, jadi tempatnya di **Build variables and secrets**.
 
 3. Variabel berlaku mulai build berikutnya, misalnya saat PR di-merge atau ada commit baru di PR.
+
+Satu variabel lagi bersifat pilihan: `VITE_SUPPORT_WHATSAPP`, nomor WhatsApp Anda untuk tombol **Hubungi kami** dan **Perpanjang**. Lihat [docs/paket.md](paket.md).
 
 Project URL dan publishable key aman dimasukkan ke aplikasi, karena memang ikut terkirim ke setiap HP. Yang **tidak boleh** dibagikan atau dimasukkan ke GitHub/Cloudflare: **secret key** (`sb_secret_…` atau `service_role`) dan **password database**.
 
@@ -112,6 +116,7 @@ Di HP pemilik: **Pengaturan → Akun & sinkron → Perangkat**, lalu ketuk **Put
 | Offline · belum terkirim | Tidak ada internet. Data aman di HP dan otomatis terkirim saat online. |
 | Perlu masuk lagi         | Sesi akun berakhir. Pemilik: masuk lagi lewat Pengaturan.              |
 | Diputus pemilik          | HP ini sudah diputus. Minta kode baru untuk memasang ulang.            |
+| Masa aktif habis         | Paket toko berakhir. Kasir tetap jalan; perpanjang lewat Pengaturan.   |
 | Sinkron gagal            | Server menolak atau sedang bermasalah. Dicoba lagi otomatis.           |
 | Ada data ditolak         | Ada data yang ditolak server. Kirim screenshot Pengaturan ke Claude.   |
 
@@ -121,7 +126,7 @@ Paket Free cukup untuk uji coba dan satu toko kecil:
 
 - Database 500 MB dan penyimpanan gambar 1 GB.
 - **Project dijeda otomatis kalau tidak dipakai 7 hari.** Data tetap aman; buka dasbor Supabase dan ketuk **Restore project**.
-- Email bawaan Supabase dibatasi sekitar 2 email per jam dan hanya ke email anggota tim project. Karena email pemilik sama dengan akun Supabase, konfirmasi dan "lupa password" tetap terkirim.
+- Email bawaan Supabase dibatasi sekitar 2 email per jam dan hanya ke email anggota tim project. Karena email pemilik sama dengan akun Supabase, konfirmasi dan "lupa password" tetap terkirim. Supaya pemilik toko lain bisa mendaftar, pasang SMTP sendiri: [docs/email-smtp.md](email-smtp.md).
 
 Sesuai keputusan awal, naik ke **Supabase Pro (US$25/bulan)** saat toko mulai dipakai sungguhan: tidak ada jeda otomatis dan ada backup harian.
 

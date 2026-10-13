@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { useCachedPlan } from '../cloud/plan';
 import { syncLabel, syncTone } from '../cloud/status-text';
 import { useSyncStatus } from '../cloud/sync-manager';
 import { signOut } from '../db/auth';
 import { db } from '../db/db';
+import { planReminderText } from '../domain/plan';
+import { nowIso } from '../domain/time';
 import { InstallButton } from '../pwa/InstallButton';
 import { useStockAlerts } from '../features/stok/useStock';
 import { useOnlineStatus } from '../ui/useOnlineStatus';
@@ -18,12 +21,15 @@ export function Layout() {
   const { pathname } = useLocation();
   const stock = useStockAlerts(store.id);
   const nav = useRef<HTMLElement>(null);
+  const content = useRef<HTMLDivElement>(null);
 
-  // The owner's menu is wider than a phone: keep the current page's tab in view.
   useEffect(() => {
+    // The owner's menu is wider than a phone: keep the current page's tab in view.
     nav.current
       ?.querySelector('[aria-current="page"]')
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // Every page shares one scrolling area, so a new page would open where the last one was.
+    content.current?.scrollTo({ top: 0 });
   }, [pathname]);
 
   const links = [
@@ -106,9 +112,28 @@ export function Layout() {
           </div>
         )}
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      {isOwner && <PlanReminder />}
+      <div ref={content} className="min-h-0 flex-1 overflow-y-auto">
         <Outlet />
       </div>
+    </div>
+  );
+}
+
+/** Tells the owner, on every screen, that the plan is about to end or has ended. */
+function PlanReminder() {
+  const plan = useCachedPlan();
+  const text = plan ? planReminderText(plan, nowIso()) : null;
+  if (!text) return null;
+  return (
+    <div
+      role="status"
+      className="flex shrink-0 items-center gap-2 bg-amber-100 px-4 py-1 text-sm text-amber-950"
+    >
+      <span className="flex-1">{text}</span>
+      <Link to="/pengaturan" className="flex min-h-12 items-center px-2 font-semibold underline">
+        Perpanjang
+      </Link>
     </div>
   );
 }

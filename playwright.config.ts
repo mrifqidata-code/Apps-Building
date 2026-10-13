@@ -25,6 +25,8 @@ export default defineConfig({
   // Tests run against the production build so the service worker is real.
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
+    // A made-up operator number, so the "Hubungi kami" buttons show.
+    env: { VITE_SUPPORT_WHATSAPP: '081200001111' },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

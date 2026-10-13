@@ -57,9 +57,14 @@ jobs:
       - run: npm ci
       # Postgres, Auth, Storage and the API in Docker, with supabase/migrations applied.
       - run: npm run db:start
+      # The local stack's secret key, for tests that act as the operator (src/test/cloud.ts).
+      # Read from the CLI instead of kept in the repo, where secret scanners would flag it.
+      - run: echo "SUPABASE_SECRET_KEY=$(npx -y supabase@2.120.0 status -o json 2>/dev/null | jq -r .SECRET_KEY)" >> "$GITHUB_ENV"
       - run: npm run test:cloud
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e:cloud
+      # Last: the cleanup script in supabase/admin empties the data the tests made.
+      - run: npm run test:kosongkan
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

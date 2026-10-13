@@ -70,6 +70,12 @@ export function jakartaCompactDate(value: Date | IsoDateTime): string {
   return `${pad2(year % 100)}${pad2(month)}${pad2(day)}`;
 }
 
+/** e.g. "8 Okt 2026". */
+export function formatJakartaDate(value: Date | IsoDateTime): string {
+  const { year, month, day } = jakartaParts(value);
+  return `${day} ${MONTHS_SHORT[month - 1]} ${year}`;
+}
+
 /** e.g. "8 Okt 2026 14.30" — the Indonesian convention uses a dot in times. */
 export function formatJakartaDateTime(value: Date | IsoDateTime): string {
   const { year, month, day, hour, minute } = jakartaParts(value);

@@ -22,6 +22,8 @@ const MESSAGES: Record<string, string> = {
   too_many_attempts: 'Terlalu banyak kode salah. Coba lagi 1 jam lagi.',
   already_paired: 'HP ini sudah terhubung ke toko.',
   not_member: 'HP ini sudah diputus oleh pemilik toko.',
+  plan_inactive:
+    'Masa aktif paket toko sudah habis, jadi sinkron berhenti. Kasir tetap jalan dan data aman di HP ini. Setelah paket diperpanjang, data terkirim sendiri.',
   invalid_credentials: 'Email atau password salah.',
   user_already_exists: 'Email ini sudah terdaftar. Silakan masuk.',
   email_exists: 'Email ini sudah terdaftar. Silakan masuk.',
@@ -59,16 +61,26 @@ async function rpc<T>(client: SupabaseClient, fn: string, args: object = {}): Pr
 
 export type SignUpResult = 'signed-in' | 'check-email';
 
+/** Which Syarat Layanan / Kebijakan Privasi the owner agreed to, kept with the account. */
+export interface TermsConsent {
+  version: string;
+  acceptedAt: string;
+}
+
 export async function signUpOwner(
   client: SupabaseClient,
   email: string,
   password: string,
   redirectTo: string,
+  consent: TermsConsent,
 ): Promise<SignUpResult> {
   const { data, error } = await client.auth.signUp({
     email: email.trim(),
     password,
-    options: { emailRedirectTo: redirectTo },
+    options: {
+      emailRedirectTo: redirectTo,
+      data: { terms_version: consent.version, terms_accepted_at: consent.acceptedAt },
+    },
   });
   if (error) throw error;
   // Supabase hides whether an email is taken: an existing address comes back without identities.

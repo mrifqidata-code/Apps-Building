@@ -28,7 +28,11 @@ export default defineConfig({
   },
   webServer: {
     command: `npx vite build --outDir dist-cloud && npx vite preview --outDir dist-cloud --port ${PORT} --strictPort`,
-    env: { VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY: SUPABASE_KEY },
+    env: {
+      VITE_SUPABASE_URL: SUPABASE_URL,
+      VITE_SUPABASE_PUBLISHABLE_KEY: SUPABASE_KEY,
+      VITE_SUPPORT_WHATSAPP: '081200001111',
+    },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

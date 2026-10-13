@@ -29,6 +29,7 @@ Panduan kerja untuk Claude Code di repo ini. Perbarui file ini setiap ada keputu
   - Library ini dimuat lazy (`src/cloud/client.ts`), jadi layar kasir tidak menunggunya.
   - URL dan publishable key masuk saat build lewat `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, yang diisi di Cloudflare **Settings → Build → Build variables and secrets** (bukan `.env` di repo, supaya build e2e tidak menyentuh project asli). Kotak "Runtime variables and secrets" tidak bisa dipakai untuk Worker yang hanya berisi static assets.
   - Tanpa variabel itu, fitur cloud tersembunyi dan aplikasi berjalan lokal saja.
+  - `VITE_SUPPORT_WHATSAPP` (pilihan, juga di Build variables): nomor WhatsApp pengelola untuk tombol "Hubungi kami" dan "Perpanjang". Tidak disimpan di repo. Tanpa nomor, tombolnya disembunyikan. Build e2e memakai nomor rekaan `081200001111`.
   - Panduan untuk pemilik: `docs/supabase.md`. Aturan sinkron: `docs/sinkron.md`.
 - Deploy: Cloudflare Workers dengan static assets saja, tanpa kode server (gratis, boleh komersial). Konfigurasinya di `wrangler.jsonc`. Panduan: `docs/deploy-cloudflare.md`.
   - `name` di `wrangler.jsonc` harus sama dengan nama Worker di dasbor Cloudflare (`apps-building`). Workers Builds tetap memakai nama Worker yang terhubung kalau beda (lewat `WRANGLER_CI_OVERRIDE_NAME`), tapi akan membuka PR otomatis untuk menyamakannya.
@@ -55,9 +56,11 @@ npm run db:start     # Supabase lokal di Docker (supabase CLI 2.120.0 lewat npx)
 npm run db:reset     # pasang ulang supabase/migrations dari nol (setelah mengubah SQL)
 npm run test:cloud   # RLS + sinkron dua perangkat terhadap Supabase lokal (src/**/*.cloud.test.ts)
 npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, port 4174)
+npm run test:kosongkan # jalankan supabase/admin/kosongkan-*.sql ke Supabase lokal dan periksa hasilnya
 ```
 
 - Test `*.cloud.test.ts` dan `e2e/cloud.spec.ts` butuh Supabase lokal, jadi tidak ikut `npm test`/`npm run test:e2e`. CI menjalankannya di job terpisah "Supabase lokal".
+  - Test yang bertindak sebagai pengelola (`adminClient()`, misalnya mengakhiri paket) butuh `SUPABASE_SECRET_KEY`: `export SUPABASE_SECRET_KEY=$(npx -y supabase@2.120.0 status -o json | jq -r .SECRET_KEY)`. Kunci lokal ini sengaja tidak ditulis di repo (pemindai rahasia GitHub akan menandainya). CI mengisinya lewat `$GITHUB_ENV`.
 - Di container cloud Claude, jalankan `dockerd` dulu, lalu pakai `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io` saat `supabase start`/`db reset`, karena blob image di public.ecr.aws diblokir proxy.
 
 - `@playwright/test` dikunci di 1.56.1 karena cocok dengan Chromium yang terpasang di container cloud (`/opt/pw-browsers`). Di CI, browser dipasang dengan `npx playwright install --with-deps chromium`.
@@ -104,7 +107,9 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `shift.ts`: ringkasan laci (`summarizeShift`), teks rekap tutup kasir.
   - `csv.ts` dan `report-csv.ts`: ekspor CSV.
   - `stock.ts`: hitung stok (`stockOnHand`), status Habis/Sisa/Stok, dan margin tipis (`isThinMargin`, 20%).
-  - `guide-markdown.ts`: membaca subset Markdown `docs/panduan.md` untuk halaman Bantuan. Format lain (tabel, `###`, kutipan) ditolak oleh test.
+  - `guide-markdown.ts`: membaca subset Markdown `docs/panduan.md` untuk halaman Bantuan. Format lain (tabel, `###`, kutipan) ditolak oleh test. Dipakai juga untuk `docs/syarat-layanan.md` dan `docs/kebijakan-privasi.md`.
+  - `plan.ts`: status paket (`planState`: tanpa batas, aktif, ≤7 hari lagi, habis), teks masa aktif, dan pesan WhatsApp perpanjangan. Hanya tampilan; aturannya di server.
+  - `legal.ts`: `TERMS_VERSION` syarat & privasi. Ubah bersama baris "Berlaku sejak" di kedua dokumen (dicek test).
 - `src/db/`: layanan Dexie.
   - `checkout.ts` `completeSale`: satu transaksi IndexedDB untuk nomor struk + transaksi + item + mutasi stok. Harga **selalu dibaca ulang dari katalog** saat bayar, jadi jangan percaya harga dari state UI.
   - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
@@ -124,6 +129,9 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `account.ts`: daftar/masuk pemilik, `connectLocalStore`, `joinStoreAsOwner`, `pairWithCode`, kode pasang, putus perangkat, pesan error berbahasa Indonesia.
   - `link.ts`: status hubungan HP (`meta.cloudLink`) dan `replaceLocalStore` (mengosongkan HP, printer tetap).
   - `sync-manager.ts`: menjadwalkan sinkron dan status untuk UI (`useSyncStatus`).
+    - Fase `plan-inactive` saat server menolak dengan `plan_inactive`: perubahan menunggu di HP, coba lagi otomatis setiap 10 menit (tombol "Sinkron sekarang" tetap langsung).
+    - Setelah sinkron, membaca paket toko (`store_plans`, paling sering tiap 10 menit) ke `meta.cloudPlan`.
+  - `plan.ts`: `fetchStorePlan`, cache `meta.cloudPlan`, `useCachedPlan`.
 - Semua tulis lokal ke tabel yang disinkron **wajib** lewat `newRow`/`touched` (`src/db/rows.ts`), yang memberi tanda `pending: 1`. Data dari server ditulis tanpa tanda itu.
 - SQL Supabase ada di `supabase/migrations/`.
   - Jangan mengedit migration yang sudah dipasang pemilik. Tambahkan file baru.
@@ -141,6 +149,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `cloudLink`: `{storeId, role: 'owner' | 'device', linkedAt}` kalau HP terhubung ke cloud.
   - `syncCursors` dan `lastSyncAt`: posisi pull per tabel dan waktu sinkron terakhir.
   - `serverTables`: tabel yang dimiliki server (dari pull terakhir).
+  - `cloudPlan`: paket toko terakhir yang dibaca dari server (`{plan, activeUntil, checkedAt}`), agar tetap tampil offline.
   - `printer`: satu-satunya entri yang tetap ada saat HP dipindah ke toko lain.
 - UUIDv7 monotonik dalam satu milidetik, jadi urutan `id` = urutan dibuat. Item struk diurutkan dengan `sortBy('id')`.
 - Font UI: **Poppins** (permintaan pemilik, 9 Okt 2026).
@@ -164,6 +173,8 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 - Menu: kasir melihat Kasir, Riwayat, Kas, Stok, dan Bantuan. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
   - **Stok** hanya muncul kalau ada produk yang dilacak stoknya (toko demo: Croissant Butter).
   - **Bantuan** (`/bantuan`, tanpa perlu masuk, juga ditautkan dari layar masuk) menampilkan `docs/panduan.md`, yang diimpor dengan `?raw` sehingga ikut di-bundle dan bisa dibuka offline. Ubah panduan di file itu saja.
+    - Di bawahnya: tombol "Hubungi kami lewat WhatsApp" (`SupportLink`) dan tautan `/syarat` dan `/privasi` (`LegalPage`, juga tanpa perlu masuk).
+  - Pemilik melihat pita kuning (`PlanReminder` di `Layout`) mulai 7 hari sebelum paket berakhir dan setelah habis. Kartu **Paket** ada di Pengaturan → Akun & sinkron.
   - Menu itu memakai angka penanda jumlah produk yang habis atau menipis. Teks link-nya jadi "Stok1", dan nama aksesibelnya "Stok, 1 perlu diisi ulang". Di e2e, cari link menu dengan `exact: true`.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
@@ -180,6 +191,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `stockMovements`, `auditLog`, `images`
   - `cashMovements` (M3, Dexie v3): kas masuk/keluar saat shift, hanya bisa ditambah. Di server: `cash_movements` (file SQL M3).
   - Khusus lokal (tidak disinkron): `counters` dan `meta` (`storeId` dan `deviceId` aktif).
+  - Khusus server (tidak disinkron, M7): `store_plans` (`plan` = `trial`/`toko`, `active_until`, null = tanpa batas). Anggota toko hanya bisa membaca; mengubahnya hanya lewat fungsi `admin_*` (secret key atau SQL Editor).
 - Item transaksi menyimpan **snapshot** nama, harga, HPP, dan varian. Transaksi menyimpan snapshot persen pajak dan layanan.
 - **Stok** dihitung dari `stockMovements` (`src/domain/stock.ts`). Tidak ada kolom stok yang disinkron.
   - Tanpa opname, stok = jumlah semua `qtyDelta`.
@@ -196,7 +208,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 ## Keputusan yang sudah disetujui (Okt 2026)
 
 1. **Biaya:** Cloudflare Workers dan Supabase Free selama pengembangan. Naik ke Supabase Pro (US$25/bulan) saat toko pertama mulai memakai sungguhan.
-2. **Urutan milestone:** M0 → M1 → M2 → **M5** → M3 → M4 → M6.
+2. **Urutan milestone:** M0 → M1 → M2 → **M5** → M3 → M4 → M6, lalu M7 (monetisasi, permintaan pemilik 13 Okt 2026).
 3. **Pajak:** diatur per toko.
    - Pilihan `pricesIncludeTax` menentukan harga sudah atau belum termasuk pajak.
    - Untuk harga "belum termasuk":
@@ -254,6 +266,16 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
     - Laporan mengeluarkan transaksi void/refund dari tanggal aslinya.
     - Server hanya menjamin status maju sekali (`paid → void/refunded`). Server tidak bisa memeriksa PIN pemilik, jadi aturan "hanya pemilik" ditegakkan di aplikasi dan dibuktikan lewat log audit (sama seperti keputusan 4).
 14. **Panduan (M6):** menu **Bantuan** di aplikasi, dari satu sumber `docs/panduan.md`.
+
+15. **Monetisasi (M7, disetujui 13 Okt 2026):**
+    - **Gratis = 1 HP lokal** tanpa akun. **Fitur cloud** (akun, sinkron, cadangan, HP kasir tambahan) berbayar setelah **uji coba 30 hari**, yang dimulai saat `create_store`.
+    - Perpanjangan **manual** setelah transfer bank (`admin_extend_plan`, `admin_set_plan_unlimited`, `admin_stores` di SQL Editor; panduan `docs/paket.md`). Tidak ada payment gateway dan tidak diperpanjang otomatis.
+    - Ditegakkan di server: `private.is_member`, `is_owner`, dan `my_device_id` melempar `plan_inactive` untuk anggota toko yang paketnya habis. Semua policy, RPC sinkron, kode pasang, dan Storage memakai fungsi itu. Bukan anggota tetap mendapat `false`/`not_member`.
+    - Saat habis, kasir tetap jalan dan data menunggu di HP. Tidak ada batas jumlah HP yang ditegakkan.
+    - **Syarat Layanan dan Kebijakan Privasi** (draf, bukan nasihat hukum) di `docs/`, tampil di aplikasi, wajib dicentang saat daftar. Versi dan waktunya disimpan di `user_metadata` akun (`terms_version`, `terms_accepted_at`).
+    - **Kosongkan data uji:** `supabase/admin/kosongkan-1-lihat.sql` lalu `kosongkan-2-hapus.sql` (semua tabel `public` yang punya kolom `store_id`, kode pasang, akun anonim; akun email tetap). File gambar dihapus lewat menu Storage karena Supabase menolak `delete` langsung di `storage.objects`. Panduan: `docs/kosongkan-data.md`.
+    - Email pendaftaran untuk pemilik lain butuh SMTP sendiri (Resend + domain): `docs/email-smtp.md`.
+    - Belum diputuskan: harga Paket Toko (disampaikan lewat WhatsApp), nama badan usaha di dokumen legal, dan lokasi server Supabase.
 
 ### Asumsi MVP
 
