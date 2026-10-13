@@ -1,12 +1,21 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router';
 import guideMarkdown from '../../../docs/panduan.md?raw';
+import { useSession } from '../../app/session-context';
 import { parseGuide, type GuideBlock, type TextRun } from '../../domain/guide-markdown';
 
 /** The guide from docs/panduan.md, bundled into the app so it opens offline. */
 export function HelpPage() {
+  const { user } = useSession();
   const guide = useMemo(() => parseGuide(guideMarkdown), []);
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4">
+      {/* Opened from the sign-in screen there is no menu, so offer the way back. */}
+      {!user && (
+        <Link to="/masuk" className="flex min-h-12 items-center font-semibold text-brand-800">
+          ← Kembali ke layar masuk
+        </Link>
+      )}
       <h1 className="text-xl font-bold">Bantuan</h1>
       <Blocks blocks={guide.intro} />
       <div className="flex flex-col gap-2">
@@ -17,7 +26,10 @@ export function HelpPage() {
           >
             <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 font-semibold">
               <span className="flex-1">{section.title}</span>
-              <span aria-hidden className="text-slate-400 transition group-open:rotate-90">
+              <span
+                aria-hidden
+                className="text-2xl leading-none text-slate-400 transition group-open:rotate-90"
+              >
                 ›
               </span>
             </summary>

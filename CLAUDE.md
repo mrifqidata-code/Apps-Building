@@ -104,6 +104,7 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `shift.ts`: ringkasan laci (`summarizeShift`), teks rekap tutup kasir.
   - `csv.ts` dan `report-csv.ts`: ekspor CSV.
   - `stock.ts`: hitung stok (`stockOnHand`), status Habis/Sisa/Stok, dan margin tipis (`isThinMargin`, 20%).
+  - `guide-markdown.ts`: membaca subset Markdown `docs/panduan.md` untuk halaman Bantuan. Format lain (tabel, `###`, kutipan) ditolak oleh test.
 - `src/db/`: layanan Dexie.
   - `checkout.ts` `completeSale`: satu transaksi IndexedDB untuk nomor struk + transaksi + item + mutasi stok. Harga **selalu dibaca ulang dari katalog** saat bayar, jadi jangan percaya harga dari state UI.
   - `cart.ts`: reducer keranjang. Keranjang hanya menyimpan id dan pilihan.
@@ -112,6 +113,10 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
   - `shift.ts`: `openShift`, `addCashMovement`, `closeShift`, `getOpenShift`. Satu HP maksimal punya satu shift terbuka.
   - `stock.ts`: `addStockIn` (semua pengguna), `recordStockOpname` (hanya pemilik, ditegakkan di fungsi dan tercatat di `auditLog`), `loadStockLevels`.
   - `saveProduct` bisa menyalakan `trackStock`, mengisi `lowStockThreshold`, dan mencatat stok awal sebagai opname ("Stok awal").
+  - `cancel.ts`: `planCancel` dan `cancelSale`. Hanya pemilik (ditegakkan di fungsi), wajib alasan, dan tercatat di `auditLog`.
+    - Jenisnya ditentukan oleh shift transaksi: masih buka → `void`, sudah ditutup atau tanpa shift → `refund` (`status = 'refunded'`).
+    - Barang dikembalikan lewat mutasi `void_return`, yang membalik mutasi `sale` transaksi itu. Void selalu mengembalikan; refund kalau `restock`.
+    - Refund tunai dicatat sebagai kas keluar "Refund <no. struk>" di shift yang sedang buka di HP itu. Tanpa shift buka, uangnya tidak tercatat.
 - `src/cloud/`: akun dan sinkron (M5).
   - `sync-engine.ts` `SyncEngine`: push baris `pending` lewat RPC `push_changes`, pull lewat `pull_changes` dengan kursor per tabel (mundur 60 detik), lalu unduh file gambar.
   - `merge.ts`: aturan konflik di HP. Harus sama dengan trigger di SQL.
@@ -156,8 +161,9 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
 - Test e2e printer memakai printer tiruan di `e2e/printer-mocks.ts`, yang merekam semua byte ke `window.__printed`.
 - Test e2e memakai helper di `e2e/helpers.ts`. Layout HP memakai bottom bar dan sheet keranjang, sedangkan laptop (≥1024px) memakai panel keranjang di kanan.
   - `signIn` otomatis membuka kasir dengan modal Rp0 kalau mendarat di layar Kasir. Pakai `{ openDrawer: false }` untuk melihat panel "Buka kasir".
-- Menu: kasir melihat Kasir, Riwayat, Kas, dan Stok. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
+- Menu: kasir melihat Kasir, Riwayat, Kas, Stok, dan Bantuan. Pemilik juga melihat Laporan, Produk, Pengaturan. Di HP menu pemilik bisa digeser, dan tab yang aktif selalu digulir ke dalam layar.
   - **Stok** hanya muncul kalau ada produk yang dilacak stoknya (toko demo: Croissant Butter).
+  - **Bantuan** (`/bantuan`, tanpa perlu masuk, juga ditautkan dari layar masuk) menampilkan `docs/panduan.md`, yang diimpor dengan `?raw` sehingga ikut di-bundle dan bisa dibuka offline. Ubah panduan di file itu saja.
   - Menu itu memakai angka penanda jumlah produk yang habis atau menipis. Teks link-nya jadi "Stok1", dan nama aksesibelnya "Stok, 1 perlu diisi ulang". Di e2e, cari link menu dengan `exact: true`.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
@@ -239,6 +245,15 @@ npm run test:e2e:cloud # Playwright dengan sinkron aktif (build ke dist-cloud, p
     - **Stok habis tetap bisa dijual**, dengan label "Habis" (stok bisa minus). Alasannya, HP lain mungkin offline, jadi angka stok di satu HP belum tentu tepat.
     - **Margin tipis** = margin di bawah 20% dari harga jual (`THIN_MARGIN_BPS`). Muncul sebagai peringatan, tapi produk tetap bisa disimpan. Varian dengan selisih harga/HPP juga diperiksa.
     - Tidak ada SQL baru: kolom `track_stock`, `low_stock_threshold`, dan tabel `stock_movements` sudah ada sejak M5.
+
+13. **Void dan refund (M6, disetujui 13 Okt 2026):**
+    - Hanya pemilik yang boleh, wajib alasan, dan tercatat di log audit. Transaksi tidak pernah dihapus.
+    - Di HP kasir, pemilik menyetujui dengan **PIN pemilik** di lembar pembatalan (`checkPin`, kunci 5x salah), tanpa mengganti pengguna yang sedang masuk.
+    - **Void** = shift transaksi masih buka: transaksi keluar dari rekap kas, dan barang selalu kembali ke stok.
+    - **Refund** = shift sudah ditutup: uang tunai diambil dari laci yang sedang buka (kas keluar otomatis), dan barang kembali ke stok kalau dicentang (bawaan: ya).
+    - Laporan mengeluarkan transaksi void/refund dari tanggal aslinya.
+    - Server hanya menjamin status maju sekali (`paid → void/refunded`). Server tidak bisa memeriksa PIN pemilik, jadi aturan "hanya pemilik" ditegakkan di aplikasi dan dibuktikan lewat log audit (sama seperti keputusan 4).
+14. **Panduan (M6):** menu **Bantuan** di aplikasi, dari satu sumber `docs/panduan.md`.
 
 ### Asumsi MVP
 

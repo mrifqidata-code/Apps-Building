@@ -1,6 +1,6 @@
 # Panduan Reqap
 
-Panduan singkat untuk pemilik dan kasir. Panduan yang sama ada di menu **Bantuan** di aplikasi, dan bisa dibuka tanpa internet.
+Panduan singkat untuk pemilik dan kasir. Di aplikasi, panduan ini ada di menu **Bantuan** dan bisa dibuka tanpa internet.
 
 ## Menyiapkan toko (pemilik, sekali saja)
 

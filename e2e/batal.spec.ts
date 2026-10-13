@@ -109,4 +109,6 @@ test('panduan bisa dibuka dari layar masuk, juga tanpa internet', async ({ page,
   await section.locator('summary').click();
   await expect(section).toContainText('Uang fisik di laci');
   await expect(section).toContainText('selisihnya (Pas, Lebih, atau Kurang)');
+  await page.getByRole('link', { name: '← Kembali ke layar masuk' }).click();
+  await expect(page.getByText('Siapa yang bertugas?')).toBeVisible();
 });
