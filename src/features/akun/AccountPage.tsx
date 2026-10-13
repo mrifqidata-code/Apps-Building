@@ -19,6 +19,8 @@ import { countUnsent, startEmptyStore } from '../../cloud/link';
 import { syncManager } from '../../cloud/sync-manager';
 import { db } from '../../db/db';
 import { META_IS_DEMO } from '../../db/seed';
+import { TERMS_VERSION } from '../../domain/legal';
+import { TRIAL_DAYS } from '../../domain/plan';
 import { nowIso } from '../../domain/time';
 import { Button, ErrorText, Field, inputClass } from '../../ui/kit';
 
@@ -74,6 +76,7 @@ function AuthForm({ client, relinking }: { client: SupabaseClient; relinking: bo
   const [mode, setMode] = useState<Mode>('masuk');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -87,12 +90,18 @@ function AuthForm({ client, relinking }: { client: SupabaseClient; relinking: bo
     if (mode !== 'lupa' && password.length < 8) {
       return setError('Password minimal 8 karakter.');
     }
+    if (mode === 'daftar' && !agreed) {
+      return setError('Centang persetujuan Syarat Layanan dan Kebijakan Privasi dulu.');
+    }
     setBusy(true);
     try {
       if (mode === 'masuk') {
         await signInOwner(client, email, password);
       } else if (mode === 'daftar') {
-        const result = await signUpOwner(client, email, password, `${origin}/akun`);
+        const result = await signUpOwner(client, email, password, `${origin}/akun`, {
+          version: TERMS_VERSION,
+          acceptedAt: nowIso(),
+        });
         if (result === 'check-email') {
           setInfo(
             `Kami mengirim email konfirmasi ke ${email.trim()}. Buka email itu dan ketuk tautannya, lalu kembali ke sini dan masuk.`,
@@ -163,6 +172,33 @@ function AuthForm({ client, relinking }: { client: SupabaseClient; relinking: bo
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+      )}
+      {mode === 'daftar' && (
+        <>
+          <p className="text-sm text-slate-600">
+            Fitur cloud gratis dicoba {TRIAL_DAYS} hari, lalu berbayar. Tanpa akun, Reqap tetap
+            gratis di HP ini.
+          </p>
+          <label className="flex min-h-12 items-start gap-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-6 shrink-0 accent-brand-700"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+            />
+            <span>
+              Saya sudah membaca dan menyetujui{' '}
+              <Link to="/syarat" className="font-semibold text-brand-800 underline">
+                Syarat Layanan
+              </Link>{' '}
+              dan{' '}
+              <Link to="/privasi" className="font-semibold text-brand-800 underline">
+                Kebijakan Privasi
+              </Link>
+              .
+            </span>
+          </label>
+        </>
       )}
       <ErrorText>{error}</ErrorText>
       {info && (

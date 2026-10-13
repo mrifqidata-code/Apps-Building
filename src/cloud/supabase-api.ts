@@ -14,6 +14,9 @@ export function toCloudError(error: ErrorLike, status?: number): CloudError {
   const code = error.code ?? '';
   if (!status) return new CloudError('offline', error.message, code);
   if (error.message === 'not_member') return new CloudError('not-member', error.message, code);
+  if (error.message === 'plan_inactive') {
+    return new CloudError('plan-inactive', error.message, code);
+  }
   if (status === 401 || code.startsWith('PGRST3')) {
     return new CloudError('signed-out', error.message, code);
   }

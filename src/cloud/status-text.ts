@@ -8,6 +8,8 @@ export function syncLabel(status: SyncStatus, online: boolean): string {
       return online ? 'Online' : 'Offline';
     case 'revoked':
       return 'Diputus pemilik';
+    case 'plan-inactive':
+      return 'Masa aktif habis';
     case 'signed-out':
       return 'Perlu masuk lagi';
     case 'syncing':
@@ -28,7 +30,14 @@ export function syncLabel(status: SyncStatus, online: boolean): string {
 
 /** Dot colour next to the label. */
 export function syncTone(status: SyncStatus, online: boolean): 'ok' | 'wait' | 'bad' {
-  if (status.phase === 'revoked' || status.phase === 'error' || status.failed > 0) return 'bad';
+  if (
+    status.phase === 'revoked' ||
+    status.phase === 'plan-inactive' ||
+    status.phase === 'error' ||
+    status.failed > 0
+  ) {
+    return 'bad';
+  }
   if (!online || status.phase === 'offline' || status.phase === 'signed-out') return 'wait';
   return status.pending > status.failed ? 'wait' : 'ok';
 }

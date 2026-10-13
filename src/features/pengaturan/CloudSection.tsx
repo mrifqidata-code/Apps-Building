@@ -9,12 +9,24 @@ import {
   type PairingCode,
 } from '../../cloud/account';
 import { useCloudAuth, useCloudLink, type CloudAuth } from '../../cloud/hooks';
+import type { CloudRole } from '../../cloud/link';
+import { useCachedPlan } from '../../cloud/plan';
 import { syncLabel } from '../../cloud/status-text';
 import { syncManager, useSyncStatus } from '../../cloud/sync-manager';
 import { db } from '../../db/db';
 import type { Device } from '../../db/schema';
-import { formatJakartaDateTime } from '../../domain/time';
+import {
+  PLAN_LABELS,
+  TRIAL_DAYS,
+  planPeriodText,
+  planRenewalMessage,
+  planState,
+  type StorePlan,
+} from '../../domain/plan';
+import { formatJakartaDateTime, nowIso } from '../../domain/time';
+import { supportWhatsAppNumber } from '../../app/support';
 import { Button, ErrorText } from '../../ui/kit';
+import { SupportLink } from '../../ui/SupportLink';
 import { useOnlineStatus } from '../../ui/useOnlineStatus';
 
 const section = 'flex flex-col gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200';
@@ -25,6 +37,7 @@ export function CloudSection() {
   const link = useCloudLink();
   const status = useSyncStatus();
   const online = useOnlineStatus();
+  const plan = useCachedPlan();
 
   if (auth === null) return null;
   if (auth === undefined || link === undefined) return null;
@@ -36,6 +49,10 @@ export function CloudSection() {
         <p className="text-sm text-slate-600">
           Data toko saat ini hanya tersimpan di HP ini. Hubungkan ke akun pemilik supaya ada
           cadangan di cloud dan bisa dipakai di beberapa HP kasir.
+        </p>
+        <p className="text-sm text-slate-600">
+          Tanpa akun, Reqap gratis dipakai di satu HP. Fitur cloud bisa dicoba gratis {TRIAL_DAYS}{' '}
+          hari, lalu berbayar.
         </p>
         <Link
           to="/akun"
@@ -67,7 +84,11 @@ export function CloudSection() {
             : (auth.email ?? 'Belum masuk')}
         </dd>
       </dl>
-      {status.message && status.phase !== 'idle' && <ErrorText>{status.message}</ErrorText>}
+      {plan && <PlanInfo plan={plan} role={link.role} />}
+      {/* The plan card already explains a lapsed plan. */}
+      {status.message && status.phase !== 'idle' && !(status.phase === 'plan-inactive' && plan) && (
+        <ErrorText>{status.message}</ErrorText>
+      )}
       {status.serverOutdated && (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
           Database cloud belum diperbarui, jadi catatan kas masuk/keluar belum terkirim (tetap aman
@@ -117,6 +138,45 @@ export function CloudSection() {
           Keluar dari akun di HP ini
         </Button>
       )}
+    </section>
+  );
+}
+
+/** The store's plan as last read from the server, and how to extend it. */
+function PlanInfo({ plan, role }: { plan: StorePlan; role: CloudRole }) {
+  const { store } = useSession();
+  const now = nowIso();
+  const state = planState(plan, now);
+  const tone =
+    state.kind === 'expired'
+      ? 'bg-red-50 text-red-900 ring-red-200'
+      : state.kind === 'ending'
+        ? 'bg-amber-50 text-amber-900 ring-amber-200'
+        : 'bg-slate-50 text-slate-700 ring-slate-200';
+  const canExtend = role === 'owner' && state.kind !== 'unlimited';
+
+  return (
+    <section aria-label="Paket" className={`flex flex-col gap-2 rounded-xl p-3 ring-1 ${tone}`}>
+      <p className="font-semibold">{PLAN_LABELS[plan.plan]}</p>
+      <p data-testid="masa-aktif">{planPeriodText(plan, now)}</p>
+      {state.kind === 'expired' && (
+        <p className="text-sm">
+          Sinkron dan cadangan cloud berhenti. Kasir tetap jalan dan data aman di HP ini. Setelah
+          paket diperpanjang, data terkirim sendiri.
+        </p>
+      )}
+      {state.kind === 'ending' && (
+        <p className="text-sm">Perpanjang sebelum berakhir supaya sinkron tidak berhenti.</p>
+      )}
+      {canExtend &&
+        (supportWhatsAppNumber() ? (
+          <SupportLink
+            message={planRenewalMessage(store.name, store.id)}
+            label="Perpanjang lewat WhatsApp"
+          />
+        ) : (
+          <p className="text-sm">Hubungi pengelola Reqap untuk memperpanjang paket.</p>
+        ))}
     </section>
   );
 }

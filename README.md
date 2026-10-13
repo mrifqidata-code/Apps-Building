@@ -20,7 +20,8 @@ Dibuat sebagai PWA, jadi bisa dipasang di layar utama HP/tablet Android lewat Ch
 | M5        | Akun pemilik, HP kasir dengan kode, sinkron Supabase  | ✅ Selesai |
 | M3        | Kas, shift, laporan, ekspor CSV                       | ✅ Selesai |
 | M4        | Stok                                                  | ✅ Selesai |
-| M6        | Pengerasan: void/refund, log audit, panduan pemakaian | ✅ PR ini  |
+| M6        | Pengerasan: void/refund, log audit, panduan pemakaian | ✅ Selesai |
+| M7        | Monetisasi: paket & masa aktif, syarat & privasi      | ✅ PR ini  |
 
 M5 sengaja dikerjakan sebelum M3, supaya laporan dan stok langsung dibangun di atas data dari semua perangkat.
 
@@ -69,6 +70,15 @@ Setelah Supabase disiapkan ([docs/supabase.md](docs/supabase.md)), pemilik bisa:
 
 Penjualan dari semua HP terkumpul dan tersinkron otomatis, termasuk yang dibuat saat offline. Aturan sinkron dan keamanannya: [docs/sinkron.md](docs/sinkron.md).
 
+## Paket dan layanan berbayar
+
+- **Gratis:** tanpa akun, di satu HP.
+- **Fitur cloud** (akun, sinkron, cadangan, HP kasir tambahan): uji coba 30 hari, lalu **Paket Toko** yang diperpanjang manual setelah transfer. Batasnya ditegakkan di server.
+- Pengelola memperpanjang paket lewat SQL Editor: [docs/paket.md](docs/paket.md).
+- Supaya pemilik toko lain bisa mendaftar, pasang email sendiri: [docs/email-smtp.md](docs/email-smtp.md).
+- Draf [Syarat Layanan](docs/syarat-layanan.md) dan [Kebijakan Privasi](docs/kebijakan-privasi.md) tampil di aplikasi dan wajib disetujui saat daftar.
+- Sebelum toko asli mulai, kosongkan data uji: [docs/kosongkan-data.md](docs/kosongkan-data.md).
+
 ## Menjalankan di komputer sendiri
 
 Yang dibutuhkan:
@@ -105,8 +115,9 @@ Untuk mencoba dari HP di jaringan Wi-Fi yang sama, jalankan `npm run dev -- --ho
 | `npm run db:start`       | Menjalankan Supabase lokal di Docker (untuk test sinkron)  |
 | `npm run test:cloud`     | Test RLS dan sinkron dua perangkat ke Supabase lokal       |
 | `npm run test:e2e:cloud` | Test browser dengan sinkron aktif (dua HP)                 |
+| `npm run test:kosongkan` | Menguji skrip kosongkan data ke Supabase lokal             |
 
-Sebelum menjalankan `npm run test:e2e` pertama kali, pasang dulu browser untuk test dengan `npx playwright install chromium`. Test cloud butuh [Docker](https://docs.docker.com/get-docker/) yang menyala.
+Sebelum menjalankan `npm run test:e2e` pertama kali, pasang dulu browser untuk test dengan `npx playwright install chromium`. Test cloud butuh [Docker](https://docs.docker.com/get-docker/) yang menyala, dan secret key Supabase lokal: `export SUPABASE_SECRET_KEY=$(npx -y supabase@2.120.0 status -o json | jq -r .SECRET_KEY)`.
 
 ## Printer struk
 
@@ -130,7 +141,7 @@ src/
   printing/   koneksi printer Bluetooth (BLE lewat Web Bluetooth, Classic lewat Web Serial)
   pwa/        pemasangan aplikasi dan pembaruan versi
   ui/         komponen tampilan bersama (tombol, sheet, keypad PIN, input rupiah)
-supabase/     konfigurasi Supabase lokal dan SQL database (migrations)
+supabase/     konfigurasi Supabase lokal, SQL database (migrations), dan skrip pengelola (admin)
 e2e/          test Playwright
 docs/         panduan
 ```

@@ -15,6 +15,19 @@ export const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
 export const SUPABASE_KEY =
   process.env.SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 
+/**
+ * The operator's view (secret key, bypasses RLS), e.g. to end a store's plan.
+ * Read from the environment so no secret key sits in the repo:
+ *   export SUPABASE_SECRET_KEY=$(npx -y supabase@2.120.0 status -o json | jq -r .SECRET_KEY)
+ */
+export function adminClient(): SupabaseClient {
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!key) throw new Error('SUPABASE_SECRET_KEY belum diisi (lihat src/test/cloud.ts)');
+  return createClient(SUPABASE_URL, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 export function newClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },

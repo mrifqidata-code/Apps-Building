@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   JAKARTA_TIME_ZONE,
+  formatJakartaDate,
   formatJakartaDateTime,
   jakartaCompactDate,
   jakartaDateKey,
@@ -23,6 +24,8 @@ describe('Jakarta time', () => {
   it('formats date and time for receipts', () => {
     expect(formatJakartaDateTime('2026-10-08T07:30:00.000Z')).toBe('8 Okt 2026 14.30');
     expect(formatJakartaDateTime('2026-05-01T00:05:00.000Z')).toBe('1 Mei 2026 07.05');
+    // 20.00 UTC is already the next day in WIB.
+    expect(formatJakartaDate('2026-11-11T20:00:00.000Z')).toBe('12 Nov 2026');
   });
 
   it('matches the IANA Asia/Jakarta zone', () => {

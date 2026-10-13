@@ -30,9 +30,10 @@ export interface CloudApi {
  * - offline: no connection; try again later.
  * - signed-out: the session on this device is gone.
  * - not-member: this device was disconnected by the owner (or never joined).
+ * - plan-inactive: the store's plan has run out (M7); the server refuses its data until extended.
  * - rejected: the server refused the request itself.
  */
-export type CloudErrorKind = 'offline' | 'signed-out' | 'not-member' | 'rejected';
+export type CloudErrorKind = 'offline' | 'signed-out' | 'not-member' | 'plan-inactive' | 'rejected';
 
 export class CloudError extends Error {
   readonly kind: CloudErrorKind;
