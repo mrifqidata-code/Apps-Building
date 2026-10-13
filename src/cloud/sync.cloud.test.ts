@@ -6,6 +6,7 @@ import { PosDatabase } from '../db/db';
 import { touched } from '../db/rows';
 import { addCashMovement, closeShift, openShift } from '../db/shift';
 import { addStockIn, loadProductStock, recordStockOpname } from '../db/stock';
+import { cancelSale } from '../db/cancel';
 import { META_DEVICE_ID, META_STORE_ID } from '../db/seed';
 import { anonymousClient, connectedOwnerDevice, engineFor } from '../test/cloud';
 import { createPairingCode, pairWithCode } from './account';
@@ -260,6 +261,60 @@ describe('Sinkron dua perangkat (Supabase lokal)', () => {
       .eq('id', sale.id)
       .single();
     expect(server.data?.status).toBe('void');
+  });
+
+  it('a refund on the owner phone reaches the cashier phone, with stock and kas keluar', async () => {
+    const { owner, phoneDb, phone, phoneDeviceId, sell } = await twoDevices();
+    const croissant = owner.product('Croissant Butter').id;
+    const sale = await sell(
+      phoneDb,
+      phoneDeviceId,
+      ['Croissant Butter', 'Croissant Butter'],
+      '2026-10-09T05:00:00.000Z',
+    );
+    const phoneShift = (await phoneDb.shifts.toArray())[0]!;
+    await closeShift(phoneDb, {
+      shiftId: phoneShift.id,
+      userId: owner.cashier.id,
+      countedCash: 144_000,
+      note: '',
+      now: '2026-10-09T10:00:00.000Z',
+    });
+    await phone.syncOnce();
+    await owner.engine.syncOnce();
+
+    // The next day the owner refunds it from their own open drawer.
+    const ownerShift = await openShift(owner.database, {
+      storeId: owner.storeId,
+      deviceId: owner.deviceId,
+      userId: owner.owner.id,
+      openingCash: 50_000,
+      now: '2026-10-10T01:00:00.000Z',
+    });
+    const result = await cancelSale(owner.database, {
+      transactionId: sale.id,
+      reason: 'Pelanggan komplain',
+      restock: true,
+      actor: { userId: owner.owner.id, role: 'owner' },
+      deviceId: owner.deviceId,
+      now: '2026-10-10T02:00:00.000Z',
+    });
+    expect(result.kind).toBe('refund');
+    await owner.engine.syncOnce();
+    await phone.syncOnce();
+
+    expect(await phoneDb.transactions.get(sale.id)).toMatchObject({
+      status: 'refunded',
+      voidReason: 'Pelanggan komplain',
+      voidedBy: owner.owner.id,
+    });
+    expect(await loadProductStock(phoneDb, croissant)).toBe(-2 + 2);
+    expect(await phoneDb.cashMovements.toArray()).toMatchObject([
+      { shiftId: ownerShift.id, type: 'out', amount: 44_000, reason: `Refund ${sale.receiptNo}` },
+    ]);
+    expect(await phoneDb.auditLog.where({ entityId: sale.id }).toArray()).toMatchObject([
+      { action: 'refund', reason: 'Pelanggan komplain' },
+    ]);
   });
 
   it('images added on one phone are downloaded by the other', async () => {

@@ -20,6 +20,7 @@ import { printReceipt } from '../../printing/receipt-print';
 import { isBleSupported, isSerialSupported, printerErrorMessage } from '../../printing/transports';
 import { useImageUrl } from '../../ui/images';
 import { Button, ErrorText, inputClass } from '../../ui/kit';
+import { CancelSection } from './CancelSection';
 import { saveReceiptAsPdf } from './pdf';
 import { useReceipt } from './useReceipt';
 
@@ -60,6 +61,7 @@ export function ReceiptPage() {
       <PrintActions receipt={receipt} autoPrint={justPaid} />
       <ReceiptPaper receipt={receipt} />
       <WhatsAppShare receipt={receipt} />
+      {id && <CancelSection transactionId={id} />}
 
       {justPaid ? (
         <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col bg-slate-50 px-4 pt-2 pb-4">
