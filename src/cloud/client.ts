@@ -30,3 +30,22 @@ export function getCloudClient(): Promise<SupabaseClient> | null {
   );
   return clientPromise;
 }
+
+/**
+ * Forgets the account session on this device only; the account's other
+ * devices stay signed in. Works offline too: supabase-js keeps the session
+ * when it cannot reach the server, so the stored session is removed as well.
+ */
+export async function forgetCloudSession(): Promise<void> {
+  const clientPromise = getCloudClient();
+  if (clientPromise) {
+    try {
+      await (await clientPromise).auth.signOut({ scope: 'local' });
+    } catch {
+      // Offline or already signed out: the stored session goes below.
+    }
+  }
+  for (const key of Object.keys(localStorage)) {
+    if (/^sb-.+-auth-token/.test(key)) localStorage.removeItem(key);
+  }
+}

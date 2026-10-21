@@ -1,4 +1,5 @@
 import { CloudSection } from './CloudSection';
+import { EmptyDeviceSection } from './EmptyDeviceSection';
 import { PrinterSection } from './PrinterSection';
 import { QrisSection } from './QrisSection';
 import { StoreSection } from './StoreSection';
@@ -16,6 +17,7 @@ export function SettingsPage() {
       <DiscountLimitSection />
       <QrisSection />
       <UsersSection />
+      <EmptyDeviceSection />
     </main>
   );
 }

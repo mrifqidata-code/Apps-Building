@@ -173,6 +173,25 @@ test('pemilik mulai toko kosong, lalu memakai toko yang sama di HP baru', async 
   const devices = cloud.getByRole('list', { name: 'Daftar perangkat' });
   await expect(devices.getByRole('listitem').filter({ hasText: 'HP ini' })).toContainText('K2');
   await expect(devices).toContainText('K1');
+
+  // That phone is handed on: emptied, it leaves the account and starts over with the demo
+  // store. The store itself stays in the cloud.
+  await expect(syncChip(second)).toHaveText('Tersinkron');
+  await second
+    .getByRole('region', { name: 'Kosongkan HP ini' })
+    .getByRole('button', { name: 'Kosongkan HP ini' })
+    .click();
+  await expect(second.getByRole('dialog', { name: 'Kosongkan HP ini' })).toContainText(
+    'sudah ada di cloud dan tetap aman',
+  );
+  await enterPin(second, '2468', 'Kosongkan');
+  await expect(second.getByText('Siapa yang bertugas?')).toBeVisible();
+  await expect(
+    second.getByRole('heading', { name: 'Kedai Kopi Senja (Demo)', level: 1 }),
+  ).toBeVisible();
+  await expect(syncChip(second)).toHaveText('Online');
+  await second.goto('/akun');
+  await expect(second.getByRole('tab', { name: 'Masuk' })).toBeVisible();
 });
 
 test('masa aktif habis: sinkron berhenti, kasir tetap jalan, lalu lanjut setelah diperpanjang', async ({

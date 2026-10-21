@@ -127,7 +127,8 @@ npm run test:kosongkan # jalankan supabase/admin/kosongkan-*.sql ke Supabase lok
   - `merge.ts`: aturan konflik di HP. Harus sama dengan trigger di SQL.
   - `mapping.ts`: camelCase ↔ snake_case dan jenis tabel (`lww`, `transaction`, `append`).
   - `account.ts`: daftar/masuk pemilik, `connectLocalStore`, `joinStoreAsOwner`, `pairWithCode`, kode pasang, putus perangkat, pesan error berbahasa Indonesia.
-  - `link.ts`: status hubungan HP (`meta.cloudLink`) dan `replaceLocalStore` (mengosongkan HP, printer tetap).
+  - `link.ts`: status hubungan HP (`meta.cloudLink`), `replaceLocalStore` (mengosongkan HP lalu menunjuk toko lain), dan `emptyDevice` (mengosongkan HP sepenuhnya; saat dibuka lagi, `bootstrap` membuat toko contoh baru). Keduanya menyimpan pengaturan printer.
+  - `client.ts` `forgetCloudSession`: keluar dari akun di HP ini saja (`signOut({ scope: 'local' })`), juga saat offline (kunci `sb-…-auth-token` di localStorage ikut dihapus).
   - `sync-manager.ts`: menjadwalkan sinkron dan status untuk UI (`useSyncStatus`).
     - Fase `plan-inactive` saat server menolak dengan `plan_inactive`: perubahan menunggu di HP, coba lagi otomatis setiap 10 menit (tombol "Sinkron sekarang" tetap langsung).
     - Setelah sinkron, membaca paket toko (`store_plans`, paling sering tiap 10 menit) ke `meta.cloudPlan`.
@@ -175,6 +176,7 @@ npm run test:kosongkan # jalankan supabase/admin/kosongkan-*.sql ke Supabase lok
   - **Bantuan** (`/bantuan`, tanpa perlu masuk, juga ditautkan dari layar masuk) menampilkan `docs/panduan.md`, yang diimpor dengan `?raw` sehingga ikut di-bundle dan bisa dibuka offline. Ubah panduan di file itu saja.
     - Di bawahnya: tombol "Hubungi kami lewat WhatsApp" (`SupportLink`) dan tautan `/syarat` dan `/privasi` (`LegalPage`, juga tanpa perlu masuk).
   - Pemilik melihat pita kuning (`PlanReminder` di `Layout`) mulai 7 hari sebelum paket berakhir dan setelah habis. Kartu **Paket** ada di Pengaturan → Akun & sinkron.
+  - **Kosongkan HP ini** (paling bawah di Pengaturan, `EmptyDeviceSection`): wajib PIN pemilik, memperingatkan data yang belum terkirim (atau semua data kalau HP tidak terhubung ke cloud), lalu `emptyDevice` + `forgetCloudSession` + muat ulang. Data di cloud tidak disentuh.
   - Menu itu memakai angka penanda jumlah produk yang habis atau menipis. Teks link-nya jadi "Stok1", dan nama aksesibelnya "Stok, 1 perlu diisi ulang". Di e2e, cari link menu dengan `exact: true`.
 
 ## Skema data (`src/db/schema.ts`, `src/db/db.ts`)
