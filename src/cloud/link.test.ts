@@ -4,8 +4,10 @@ import { PosDatabase } from '../db/db';
 import { META_DEVICE_ID, META_IS_DEMO, META_STORE_ID } from '../db/seed';
 import { META_PRINTER } from '../printing/printer';
 import { demoDatabase } from '../test/db';
+import { seedDemoData } from '../db/seed';
 import {
   countUnsent,
+  emptyDevice,
   getCloudLink,
   replaceLocalStore,
   setCloudLink,
@@ -34,6 +36,24 @@ describe('device link', () => {
       [META_DEVICE_ID, META_IS_DEMO, META_PRINTER, META_STORE_ID].sort(),
     );
     expect((await database.meta.get(META_STORE_ID))?.value).toBe('s2');
+  });
+
+  it('emptying the device leaves only the printer, and the next start brings a new demo store', async () => {
+    const { database, storeId } = await demoDatabase();
+    databases.push(database);
+    await database.meta.put({ key: META_PRINTER, value: { kind: 'ble', name: 'Putian' } });
+    await setCloudLink(database, { storeId, role: 'owner', linkedAt: 'x' });
+
+    await emptyDevice(database);
+
+    for (const table of database.tables) {
+      if (table.name !== 'meta') expect(await table.count(), table.name).toBe(0);
+    }
+    expect((await database.meta.toArray()).map((m) => m.key)).toEqual([META_PRINTER]);
+    const fresh = await seedDemoData(database);
+    expect(fresh).not.toBe(storeId);
+    expect(await database.products.count()).toBe(15);
+    expect(await getCloudLink(database)).toBeNull();
   });
 
   it('can start over with an empty store whose rows all wait to be sent', async () => {

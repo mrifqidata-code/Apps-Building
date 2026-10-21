@@ -104,3 +104,4 @@ Fitur cloud (akun, sinkron, cadangan, dan HP kasir tambahan) gratis dicoba 30 ha
 - **PIN terkunci:** tunggu sebentar setelah 5 kali salah, lalu coba lagi.
 - **Printer tidak mencetak:** tekan tombol daya printer, dekatkan ke HP, lalu ketuk **Cetak struk** lagi.
 - **Selisih kas sering muncul:** pastikan setiap uang keluar dicatat lewat **Kas keluar**.
+- **Ingin memulai dari nol di HP ini** (misalnya HP dipakai orang lain): pemilik membuka **Pengaturan → Kosongkan HP ini** dan memasukkan PIN pemilik. Semua data di HP itu terhapus; yang sudah terkirim ke cloud tetap aman.

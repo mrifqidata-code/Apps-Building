@@ -50,10 +50,16 @@ Kalau ada akun email uji yang tidak dipakai lagi, hapus di **Authentication → 
 
 Data juga tersimpan di setiap HP. Lakukan di **setiap** HP yang pernah memakai Reqap:
 
-1. Buka **Chrome** (bukan ikon Reqap).
-2. Ketuk **⋮ → Setelan → Setelan situs → Semua situs**.
-3. Cari alamat aplikasi (`apps-building.mrifqidata.workers.dev`), ketuk, lalu **Hapus & reset** (atau **Hapus data**).
-4. Buka Reqap lagi. Aplikasi mulai seperti baru, dengan toko contoh.
+1. Buka Reqap dan masuk sebagai **Pemilik**.
+2. Buka **Pengaturan**, gulir ke paling bawah, lalu ketuk **Kosongkan HP ini**.
+3. Masukkan PIN pemilik.
+4. Aplikasi terbuka lagi seperti baru, dengan toko contoh, dan HP keluar dari akun.
+
+Kalau tombol itu belum muncul (aplikasi versi lama, ketuk **Muat ulang** saat ada tulisan **Versi baru tersedia**) atau PIN pemilik di HP itu lupa, kosongkan lewat Chrome:
+
+1. Buka **Chrome** (bukan ikon Reqap), lalu buka `apps-building.mrifqidata.workers.dev`.
+2. Ketuk ikon di kiri alamat, lalu **Setelan situs** (_Site settings_).
+3. Gulir ke bawah, ketuk **Hapus & reset** (_Clear & reset_), lalu konfirmasi.
 
 HP yang tidak dikosongkan akan menampilkan status **Diputus pemilik**, karena tokonya sudah tidak ada di cloud.
 

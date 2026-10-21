@@ -3,7 +3,7 @@ import type { IsoDateTime } from '../domain/time';
 import { META_PRINTER } from '../printing/printer';
 import { SYNCED_TABLE_NAMES, type PosDatabase } from '../db/db';
 import { newRow } from '../db/rows';
-import type { Device, Store, User } from '../db/schema';
+import type { Device, MetaEntry, Store, User } from '../db/schema';
 import { META_DEVICE_ID, META_IS_DEMO, META_STORE_ID } from '../db/seed';
 
 /** Which cloud store this device syncs with, and as whom. Local only. */
@@ -32,6 +32,18 @@ export async function setCloudLink(database: PosDatabase, link: CloudLink): Prom
 /** Meta entries that belong to the phone, not to a store, and survive switching stores. */
 const DEVICE_META = new Set([META_PRINTER]);
 
+/** Deletes every table on this device except its printer settings, then writes `meta`. */
+async function clearDevice(database: PosDatabase, meta: MetaEntry[]): Promise<void> {
+  await database.transaction('rw', database.tables, async () => {
+    for (const table of database.tables) {
+      if (table.name !== 'meta') await table.clear();
+    }
+    const keep = await database.meta.filter((m) => DEVICE_META.has(m.key)).toArray();
+    await database.meta.clear();
+    await database.meta.bulkPut([...keep, ...meta]);
+  });
+}
+
 /**
  * Empties this device and points it at another store and device row. The
  * store's data then arrives with the next pull. Printer settings are kept.
@@ -40,19 +52,19 @@ export async function replaceLocalStore(
   database: PosDatabase,
   target: { storeId: string; deviceId: string },
 ): Promise<void> {
-  await database.transaction('rw', database.tables, async () => {
-    for (const table of database.tables) {
-      if (table.name !== 'meta') await table.clear();
-    }
-    const keep = await database.meta.filter((m) => DEVICE_META.has(m.key)).toArray();
-    await database.meta.clear();
-    await database.meta.bulkPut([
-      ...keep,
-      { key: META_STORE_ID, value: target.storeId },
-      { key: META_DEVICE_ID, value: target.deviceId },
-      { key: META_IS_DEMO, value: false },
-    ]);
-  });
+  await clearDevice(database, [
+    { key: META_STORE_ID, value: target.storeId },
+    { key: META_DEVICE_ID, value: target.deviceId },
+    { key: META_IS_DEMO, value: false },
+  ]);
+}
+
+/**
+ * Empties this device as if the app had just been installed: on the next
+ * start it gets the demo store again (see bootstrap). Printer settings are kept.
+ */
+export async function emptyDevice(database: PosDatabase): Promise<void> {
+  await clearDevice(database, []);
 }
 
 /**
